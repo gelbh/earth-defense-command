@@ -2,7 +2,7 @@ import React from 'react';
 import ExoplanetCard from './ExoplanetCard';
 import './ExoplanetList.css';
 
-const ExoplanetList = ({ planets, loading }) => {
+const ExoplanetList = ({ planets, loading, loadingMore, hasMore, total, onLoadMore }) => {
   if (loading) {
     return (
       <div className="loading-container">
@@ -23,13 +23,34 @@ const ExoplanetList = ({ planets, loading }) => {
   return (
     <div className="exoplanet-list">
       <div className="results-info">
-        <p>Found {planets.length.toLocaleString()} exoplanets</p>
+        <p>
+          Showing {planets.length.toLocaleString()} of {total.toLocaleString()} exoplanets
+        </p>
       </div>
       <div className="exoplanet-grid">
         {planets.map((planet, index) => (
           <ExoplanetCard key={`${planet.pl_name}-${index}`} planet={planet} />
         ))}
       </div>
+
+      {hasMore && (
+        <div className="load-more-container">
+          <button
+            onClick={onLoadMore}
+            disabled={loadingMore}
+            className="load-more-button"
+          >
+            {loadingMore ? (
+              <>
+                <div className="button-spinner"></div>
+                Loading...
+              </>
+            ) : (
+              'Load More'
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

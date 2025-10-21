@@ -19,10 +19,10 @@ export const exoplanetAPI = {
     }
   },
 
-  searchExoplanets: async (searchTerm) => {
+  searchExoplanets: async (searchTerm, params = {}) => {
     try {
       const response = await api.get('/exoplanets/search', {
-        params: { q: searchTerm },
+        params: { q: searchTerm, ...params },
       });
       return response.data;
     } catch (error) {

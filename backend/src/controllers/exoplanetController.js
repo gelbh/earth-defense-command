@@ -2,8 +2,11 @@ import nasaService from '../services/nasaService.js';
 
 export const getExoplanets = async (req, res) => {
   try {
-    const { where, order } = req.query;
-    const params = {};
+    const { where, order, limit = 50, offset = 0 } = req.query;
+    const params = {
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    };
 
     if (where) {
       params.where = where;
@@ -13,11 +16,18 @@ export const getExoplanets = async (req, res) => {
       params.order = order;
     }
 
-    const exoplanets = await nasaService.getExoplanets(params);
+    const [exoplanets, total] = await Promise.all([
+      nasaService.getExoplanets(params),
+      nasaService.getExoplanetCount({ where })
+    ]);
 
     res.json({
       success: true,
       count: exoplanets.length,
+      total,
+      offset: params.offset,
+      limit: params.limit,
+      hasMore: params.offset + exoplanets.length < total,
       data: exoplanets
     });
   } catch (error) {
@@ -30,7 +40,7 @@ export const getExoplanets = async (req, res) => {
 
 export const searchExoplanets = async (req, res) => {
   try {
-    const { q } = req.query;
+    const { q, limit = 50, offset = 0 } = req.query;
 
     if (!q) {
       return res.status(400).json({
@@ -39,11 +49,23 @@ export const searchExoplanets = async (req, res) => {
       });
     }
 
-    const exoplanets = await nasaService.searchExoplanets(q);
+    const params = {
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    };
+
+    const [exoplanets, total] = await Promise.all([
+      nasaService.searchExoplanets(q, params),
+      nasaService.getSearchCount(q)
+    ]);
 
     res.json({
       success: true,
       count: exoplanets.length,
+      total,
+      offset: params.offset,
+      limit: params.limit,
+      hasMore: params.offset + exoplanets.length < total,
       data: exoplanets
     });
   } catch (error) {
