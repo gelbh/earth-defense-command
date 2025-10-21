@@ -1,6 +1,6 @@
-import axios from 'axios';
+import axios from "axios";
 
-const NASA_TAP_API = 'https://exoplanetarchive.ipac.caltech.edu/TAP/sync';
+const NASA_TAP_API = "https://exoplanetarchive.ipac.caltech.edu/TAP/sync";
 
 // Cache for all exoplanets (since API doesn't support pagination)
 let cachedExoplanets = null;
@@ -10,7 +10,11 @@ const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
 class NasaService {
   async getAllExoplanetsFromAPI() {
     // Check cache first
-    if (cachedExoplanets && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
+    if (
+      cachedExoplanets &&
+      cacheTimestamp &&
+      Date.now() - cacheTimestamp < CACHE_DURATION
+    ) {
       return cachedExoplanets;
     }
 
@@ -20,8 +24,8 @@ class NasaService {
     const response = await axios.get(NASA_TAP_API, {
       params: {
         query: query,
-        format: 'json'
-      }
+        format: "json",
+      },
     });
 
     cachedExoplanets = response.data;
@@ -40,7 +44,7 @@ class NasaService {
       let filtered = allExoplanets;
       if (where) {
         // Basic where clause support (can be expanded)
-        filtered = allExoplanets.filter(planet => {
+        filtered = allExoplanets.filter((planet) => {
           // Simple evaluation - can be enhanced
           return true; // For now, just return all
         });
@@ -51,8 +55,8 @@ class NasaService {
 
       return paginatedData;
     } catch (error) {
-      console.error('Error fetching exoplanets:', error.message);
-      throw new Error('Failed to fetch exoplanet data from NASA API');
+      console.error("Error fetching exoplanets:", error.message);
+      throw new Error("Failed to fetch exoplanet data from NASA API");
     }
   }
 
@@ -61,8 +65,8 @@ class NasaService {
       const allExoplanets = await this.getAllExoplanetsFromAPI();
       return allExoplanets.length;
     } catch (error) {
-      console.error('Error fetching exoplanet count:', error.message);
-      throw new Error('Failed to fetch exoplanet count');
+      console.error("Error fetching exoplanet count:", error.message);
+      throw new Error("Failed to fetch exoplanet count");
     }
   }
 
@@ -75,9 +79,12 @@ class NasaService {
 
       // Filter by search term (case-insensitive)
       const searchLower = searchTerm.toLowerCase();
-      const filtered = allExoplanets.filter(planet =>
-        (planet.pl_name && planet.pl_name.toLowerCase().includes(searchLower)) ||
-        (planet.hostname && planet.hostname.toLowerCase().includes(searchLower))
+      const filtered = allExoplanets.filter(
+        (planet) =>
+          (planet.pl_name &&
+            planet.pl_name.toLowerCase().includes(searchLower)) ||
+          (planet.hostname &&
+            planet.hostname.toLowerCase().includes(searchLower))
       );
 
       // Apply pagination
@@ -85,8 +92,8 @@ class NasaService {
 
       return paginatedData;
     } catch (error) {
-      console.error('Error searching exoplanets:', error.message);
-      throw new Error('Failed to search exoplanet data');
+      console.error("Error searching exoplanets:", error.message);
+      throw new Error("Failed to search exoplanet data");
     }
   }
 
@@ -96,15 +103,18 @@ class NasaService {
 
       // Filter by search term
       const searchLower = searchTerm.toLowerCase();
-      const filtered = allExoplanets.filter(planet =>
-        (planet.pl_name && planet.pl_name.toLowerCase().includes(searchLower)) ||
-        (planet.hostname && planet.hostname.toLowerCase().includes(searchLower))
+      const filtered = allExoplanets.filter(
+        (planet) =>
+          (planet.pl_name &&
+            planet.pl_name.toLowerCase().includes(searchLower)) ||
+          (planet.hostname &&
+            planet.hostname.toLowerCase().includes(searchLower))
       );
 
       return filtered.length;
     } catch (error) {
-      console.error('Error fetching search count:', error.message);
-      throw new Error('Failed to fetch search count');
+      console.error("Error fetching search count:", error.message);
+      throw new Error("Failed to fetch search count");
     }
   }
 }
