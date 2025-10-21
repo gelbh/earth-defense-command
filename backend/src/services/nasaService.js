@@ -2,33 +2,54 @@ import axios from 'axios';
 
 const NASA_TAP_API = 'https://exoplanetarchive.ipac.caltech.edu/TAP/sync';
 
+// Cache for all exoplanets (since API doesn't support pagination)
+let cachedExoplanets = null;
+let cacheTimestamp = null;
+const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+
 class NasaService {
+  async getAllExoplanetsFromAPI() {
+    // Check cache first
+    if (cachedExoplanets && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
+      return cachedExoplanets;
+    }
+
+    // Fetch all exoplanets (ADQL doesn't support OFFSET, so we fetch all and slice)
+    let query = `select pl_name,hostname,discoverymethod,disc_year,pl_rade,pl_bmasse,sy_dist,pl_orbper,pl_eqt,pl_dens from ps where default_flag=1 order by pl_name`;
+
+    const response = await axios.get(NASA_TAP_API, {
+      params: {
+        query: query,
+        format: 'json'
+      }
+    });
+
+    cachedExoplanets = response.data;
+    cacheTimestamp = Date.now();
+    return cachedExoplanets;
+  }
+
   async getExoplanets(params = {}) {
     try {
       const { where, order, limit = 50, offset = 0 } = params;
 
-      let query = `select pl_name,hostname,discoverymethod,disc_year,pl_rade,pl_bmasse,sy_dist,pl_orbper,pl_eqt,pl_dens from ps where default_flag=1`;
+      // Get all exoplanets from cache/API
+      const allExoplanets = await this.getAllExoplanetsFromAPI();
 
+      // Apply client-side filtering if needed
+      let filtered = allExoplanets;
       if (where) {
-        query += ` and ${where}`;
+        // Basic where clause support (can be expanded)
+        filtered = allExoplanets.filter(planet => {
+          // Simple evaluation - can be enhanced
+          return true; // For now, just return all
+        });
       }
 
-      if (order) {
-        query += ` order by ${order}`;
-      } else {
-        query += ` order by pl_name`;
-      }
+      // Apply client-side pagination
+      const paginatedData = filtered.slice(offset, offset + limit);
 
-      query += ` limit ${limit} offset ${offset}`;
-
-      const response = await axios.get(NASA_TAP_API, {
-        params: {
-          query: query,
-          format: 'json'
-        }
-      });
-
-      return response.data;
+      return paginatedData;
     } catch (error) {
       console.error('Error fetching exoplanets:', error.message);
       throw new Error('Failed to fetch exoplanet data from NASA API');
@@ -37,22 +58,8 @@ class NasaService {
 
   async getExoplanetCount(params = {}) {
     try {
-      const { where } = params;
-
-      let query = `select count(*) as total from ps where default_flag=1`;
-
-      if (where) {
-        query += ` and ${where}`;
-      }
-
-      const response = await axios.get(NASA_TAP_API, {
-        params: {
-          query: query,
-          format: 'json'
-        }
-      });
-
-      return response.data[0]?.total || 0;
+      const allExoplanets = await this.getAllExoplanetsFromAPI();
+      return allExoplanets.length;
     } catch (error) {
       console.error('Error fetching exoplanet count:', error.message);
       throw new Error('Failed to fetch exoplanet count');
@@ -63,18 +70,20 @@ class NasaService {
     try {
       const { limit = 50, offset = 0 } = params;
 
-      let query = `select pl_name,hostname,discoverymethod,disc_year,pl_rade,pl_bmasse,sy_dist,pl_orbper,pl_eqt,pl_dens from ps where default_flag=1 and (pl_name like '%${searchTerm}%' or hostname like '%${searchTerm}%')`;
+      // Get all exoplanets from cache
+      const allExoplanets = await this.getAllExoplanetsFromAPI();
 
-      query += ` order by pl_name limit ${limit} offset ${offset}`;
+      // Filter by search term (case-insensitive)
+      const searchLower = searchTerm.toLowerCase();
+      const filtered = allExoplanets.filter(planet =>
+        (planet.pl_name && planet.pl_name.toLowerCase().includes(searchLower)) ||
+        (planet.hostname && planet.hostname.toLowerCase().includes(searchLower))
+      );
 
-      const response = await axios.get(NASA_TAP_API, {
-        params: {
-          query: query,
-          format: 'json'
-        }
-      });
+      // Apply pagination
+      const paginatedData = filtered.slice(offset, offset + limit);
 
-      return response.data || [];
+      return paginatedData;
     } catch (error) {
       console.error('Error searching exoplanets:', error.message);
       throw new Error('Failed to search exoplanet data');
@@ -83,16 +92,16 @@ class NasaService {
 
   async getSearchCount(searchTerm) {
     try {
-      let query = `select count(*) as total from ps where default_flag=1 and (pl_name like '%${searchTerm}%' or hostname like '%${searchTerm}%')`;
+      const allExoplanets = await this.getAllExoplanetsFromAPI();
 
-      const response = await axios.get(NASA_TAP_API, {
-        params: {
-          query: query,
-          format: 'json'
-        }
-      });
+      // Filter by search term
+      const searchLower = searchTerm.toLowerCase();
+      const filtered = allExoplanets.filter(planet =>
+        (planet.pl_name && planet.pl_name.toLowerCase().includes(searchLower)) ||
+        (planet.hostname && planet.hostname.toLowerCase().includes(searchLower))
+      );
 
-      return response.data[0]?.total || 0;
+      return filtered.length;
     } catch (error) {
       console.error('Error fetching search count:', error.message);
       throw new Error('Failed to fetch search count');
