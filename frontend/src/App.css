@@ -19,3 +19,18 @@
   font-size: 1.2rem;
   opacity: 0.9;
 }
+
+.App-main {
+  flex: 1;
+  padding-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+  .App-header h1 {
+    font-size: 2rem;
+  }
+
+  .App-header p {
+    font-size: 1rem;
+  }
+}

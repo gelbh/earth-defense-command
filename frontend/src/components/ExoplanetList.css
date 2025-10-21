@@ -1,0 +1,70 @@
+.exoplanet-list {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.results-info {
+  margin-bottom: 1.5rem;
+  color: #9ca3af;
+  font-size: 0.95rem;
+}
+
+.results-info p {
+  margin: 0;
+}
+
+.exoplanet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+}
+
+.loading-container p {
+  color: #9ca3af;
+  font-size: 1.1rem;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(102, 126, 234, 0.3);
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: #9ca3af;
+  font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+  .exoplanet-list {
+    padding: 1rem;
+  }
+
+  .exoplanet-grid {
+    grid-template-columns: 1fr;
+  }
+}
