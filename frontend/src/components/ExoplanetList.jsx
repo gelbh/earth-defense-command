@@ -2,7 +2,7 @@ import React from 'react';
 import ExoplanetCard from './ExoplanetCard';
 import './ExoplanetList.css';
 
-const ExoplanetList = ({ planets, loading, loadingMore, hasMore, total, onLoadMore }) => {
+const ExoplanetList = ({ planets, loading, loadingMore, hasMore, total = 0, onLoadMore }) => {
   if (loading) {
     return (
       <div className="loading-container">
@@ -24,7 +24,7 @@ const ExoplanetList = ({ planets, loading, loadingMore, hasMore, total, onLoadMo
     <div className="exoplanet-list">
       <div className="results-info">
         <p>
-          Showing {planets.length.toLocaleString()} of {total.toLocaleString()} exoplanets
+          Showing {planets.length.toLocaleString()} of {(total || 0).toLocaleString()} exoplanets
         </p>
       </div>
       <div className="exoplanet-grid">
