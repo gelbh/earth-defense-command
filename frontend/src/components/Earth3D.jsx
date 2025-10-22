@@ -91,18 +91,31 @@ function FallbackEarth() {
   );
 }
 
-// Asteroid marker component
+// Asteroid marker component with real NASA orbital data
 function AsteroidMarker({ threat, index }) {
   const markerRef = useRef();
   
-  // Orbital parameters
-  const radius = 3 + (index * 0.3); // Vary orbit radius
-  const speed = 0.5 + (index * 0.1);
+  // Use real NASA data if available for more accurate positioning
+  const useRealData = threat.missDistance && threat.velocity;
+  
+  // Calculate orbital parameters from real NASA data
+  // missDistance is in km, velocity is in km/s
+  const radius = useRealData 
+    ? Math.max(3.5, Math.min(5.5, 3.5 + (parseFloat(threat.missDistance) / 1000000))) // Scale based on miss distance
+    : 3 + (index * 0.3);
+    
+  const speed = useRealData
+    ? Math.max(0.1, Math.min(0.8, parseFloat(threat.velocity) / 50)) // Scale based on velocity
+    : 0.5 + (index * 0.1);
+    
   const offset = (index * Math.PI * 2) / 5; // Spread evenly
+  const initialAngle = useRealData && threat.approachDate
+    ? (new Date(threat.approachDate).getTime() / 100000) % (Math.PI * 2)
+    : offset;
   
   useFrame(({ clock }) => {
     if (markerRef.current) {
-      const t = clock.getElapsedTime() * speed + offset;
+      const t = clock.getElapsedTime() * speed + initialAngle;
       markerRef.current.position.x = Math.cos(t) * radius;
       markerRef.current.position.z = Math.sin(t) * radius;
       markerRef.current.position.y = Math.sin(t * 0.5) * 0.5; // Slight vertical movement
@@ -119,8 +132,16 @@ function AsteroidMarker({ threat, index }) {
     }
   };
 
-  // Size based on severity
+  // Size based on real NASA diameter data or severity
   const getSize = () => {
+    // Use real diameter if available (in meters)
+    if (threat.diameter && !isNaN(parseFloat(threat.diameter))) {
+      const diameterKm = parseFloat(threat.diameter) / 1000;
+      // Scale logarithmically for better visualization (0.08 to 0.2)
+      return Math.max(0.08, Math.min(0.2, 0.08 + Math.log10(diameterKm + 1) * 0.05));
+    }
+    
+    // Fallback to severity-based sizing
     switch (threat.severity) {
       case 'critical': return 0.15;
       case 'moderate': return 0.12;

@@ -336,8 +336,7 @@ class GameService {
   // Advance to next day
   async advanceDay() {
     this.gameState.day++;
-    
-    // Process unhandled threats - they cause damage!
+        // Process unhandled threats - they cause damage!
     const criticalThreats = this.gameState.threats.filter(t => t.severity === 'critical');
     const moderateThreats = this.gameState.threats.filter(t => t.severity === 'moderate');
     
