@@ -14,7 +14,7 @@ export const gameAPI = {
   // Events and game state
   getEvents: async () => {
     try {
-      const response = await api.get('/events/events');
+      const response = await api.get('/events');
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to fetch events');

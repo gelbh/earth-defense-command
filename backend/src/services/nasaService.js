@@ -117,7 +117,14 @@ class NasaService {
       return null;
     } catch (error) {
       console.error("Error fetching Earth image:", error.message);
-      throw new Error("Failed to fetch EPIC data");
+      
+      // Return a fallback placeholder when EPIC API fails (e.g., rate limit)
+      return {
+        id: 'fallback',
+        date: new Date().toISOString(),
+        caption: 'Earth (Placeholder - NASA EPIC temporarily unavailable)',
+        imageUrl: 'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=800&h=800&fit=crop'
+      };
     }
   }
 

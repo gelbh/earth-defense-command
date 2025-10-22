@@ -127,7 +127,7 @@ export const GameProvider = ({ children }) => {
   const generateEvents = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/events/events');
+      const response = await api.get('/events');
       if (response.data.success) {
         dispatch({ type: 'SET_GAME_STATE', payload: response.data.gameState });
         return response.data.events;
