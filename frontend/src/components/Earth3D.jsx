@@ -1,6 +1,6 @@
-import React, { useRef, useMemo, Suspense } from 'react';
-import { Canvas, useFrame, useLoader } from '@react-three/fiber';
-import { OrbitControls, Sphere, Stars } from '@react-three/drei';
+import React, { useRef, useMemo, Suspense, useState } from 'react';
+import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
+import { OrbitControls, Sphere, Stars, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Earth component with proper spherical texture
@@ -91,9 +91,38 @@ function FallbackEarth() {
   );
 }
 
+// Create irregular asteroid geometry
+function createAsteroidGeometry(size, seed) {
+  const geometry = new THREE.IcosahedronGeometry(size, 1);
+  const positions = geometry.attributes.position;
+  
+  // Randomize vertices to create irregular shape
+  const random = (s) => {
+    const x = Math.sin(s * 12.9898 + 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  
+  for (let i = 0; i < positions.count; i++) {
+    const vertex = new THREE.Vector3(
+      positions.getX(i),
+      positions.getY(i),
+      positions.getZ(i)
+    );
+    
+    const randomness = 0.3 + random(seed + i) * 0.4;
+    vertex.multiplyScalar(randomness);
+    
+    positions.setXYZ(i, vertex.x, vertex.y, vertex.z);
+  }
+  
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 // Asteroid marker component with real NASA orbital data
-function AsteroidMarker({ threat, index }) {
+function AsteroidMarker({ threat, index, onDeflect }) {
   const markerRef = useRef();
+  const [hovered, setHovered] = useState(false);
   
   // Use real NASA data if available for more accurate positioning
   const useRealData = threat.missDistance && threat.velocity;
@@ -113,14 +142,46 @@ function AsteroidMarker({ threat, index }) {
     ? (new Date(threat.approachDate).getTime() / 100000) % (Math.PI * 2)
     : offset;
   
+  // Track position for when paused
+  const pausedPosition = useRef({ x: 0, y: 0, z: 0, angle: 0 });
+  
   useFrame(({ clock }) => {
     if (markerRef.current) {
-      const t = clock.getElapsedTime() * speed + initialAngle;
-      markerRef.current.position.x = Math.cos(t) * radius;
-      markerRef.current.position.z = Math.sin(t) * radius;
-      markerRef.current.position.y = Math.sin(t * 0.5) * 0.5; // Slight vertical movement
+      if (hovered) {
+        // FREEZE completely when hovered - use last known position
+        markerRef.current.position.x = pausedPosition.current.x;
+        markerRef.current.position.z = pausedPosition.current.z;
+        markerRef.current.position.y = pausedPosition.current.y;
+        // Very slow rotation when paused
+        markerRef.current.rotation.x += 0.001;
+        markerRef.current.rotation.y += 0.0005;
+      } else {
+        // Normal movement when not hovered
+        const t = clock.getElapsedTime() * speed + initialAngle;
+        const x = Math.cos(t) * radius;
+        const z = Math.sin(t) * radius;
+        const y = Math.sin(t * 0.5) * 0.5;
+        
+        markerRef.current.position.x = x;
+        markerRef.current.position.z = z;
+        markerRef.current.position.y = y;
+        
+        // Save position for when we pause
+        pausedPosition.current = { x, y, z, angle: t };
+        
+        // Normal rotation
+        markerRef.current.rotation.x += 0.01;
+        markerRef.current.rotation.y += 0.005;
+      }
     }
   });
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (onDeflect) {
+      onDeflect(threat);
+    }
+  };
 
   // Color based on severity
   const getColor = () => {
@@ -150,16 +211,66 @@ function AsteroidMarker({ threat, index }) {
     }
   };
 
+  // Create irregular asteroid geometry
+  const asteroidGeometry = useMemo(() => createAsteroidGeometry(getSize(), index * 42), [index]);
+
   return (
     <group ref={markerRef}>
-      {/* Main marker sphere */}
-      <Sphere args={[getSize(), 16, 16]}>
+      {/* Large invisible hitbox for easier clicking (3x size) */}
+      <mesh
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = 'crosshair';
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          setHovered(false);
+          document.body.style.cursor = 'auto';
+        }}
+        onClick={handleClick}
+      >
+        <sphereGeometry args={[getSize() * 3, 16, 16]} />
+        <meshBasicMaterial visible={false} />
+      </mesh>
+      
+      {/* Irregular asteroid mesh (visual only) */}
+      <mesh geometry={asteroidGeometry}>
         <meshStandardMaterial
           color={getColor()}
           emissive={getColor()}
-          emissiveIntensity={0.5}
+          emissiveIntensity={hovered ? 0.8 : 0.5}
+          roughness={0.8}
+          metalness={0.2}
         />
-      </Sphere>
+      </mesh>
+      
+      {/* Selection ring when hovered */}
+      {hovered && (
+        <>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[getSize() * 2, 0.01, 8, 32]} />
+            <meshBasicMaterial color={getColor()} transparent opacity={0.8} />
+          </mesh>
+          <mesh rotation={[0, Math.PI / 2, 0]}>
+            <torusGeometry args={[getSize() * 2, 0.01, 8, 32]} />
+            <meshBasicMaterial color={getColor()} transparent opacity={0.8} />
+          </mesh>
+        </>
+      )}
+      
+      {/* Tooltip */}
+      {hovered && (
+        <Html distanceFactor={10}>
+          <div className="bg-black/90 text-white px-3 py-2 rounded-lg border border-neon-red text-xs font-mono whitespace-nowrap pointer-events-none">
+            <div className="font-bold text-neon-red">⚠️ {threat.title}</div>
+            <div className="text-gray-300">Risk: {threat.severity.toUpperCase()}</div>
+            {threat.diameter && <div className="text-gray-400">Diameter: {(parseFloat(threat.diameter) / 1000).toFixed(1)} km</div>}
+            {threat.velocity && <div className="text-gray-400">Velocity: {parseFloat(threat.velocity).toFixed(1)} km/s</div>}
+            <div className="text-neon-green mt-1 text-center">🖱️ Click to deflect</div>
+          </div>
+        </Html>
+      )}
       
       {/* Pulsing outer glow */}
       <Sphere args={[getSize() * 1.5, 16, 16]}>
@@ -211,6 +322,7 @@ function OrbitRing({ radius, color = '#4477ff', opacity = 0.1 }) {
 // Satellite component
 function Satellite({ index, total }) {
   const satelliteRef = useRef();
+  const [hovered, setHovered] = useState(false);
   const radius = 2.5; // Close orbit for satellites
   const speed = 0.8;
   const offset = (index * Math.PI * 2) / total;
@@ -228,10 +340,29 @@ function Satellite({ index, total }) {
 
   return (
     <group ref={satelliteRef}>
+      {/* Tooltip */}
+      {hovered && (
+        <Html distanceFactor={10}>
+          <div className="bg-black/90 text-white px-3 py-2 rounded-lg border border-neon-blue text-xs font-mono whitespace-nowrap pointer-events-none">
+            <div className="font-bold text-neon-blue">🛰️ Monitoring Satellite</div>
+            <div className="text-gray-300">Detects incoming threats</div>
+            <div className="text-gray-400">Orbital tracking system</div>
+          </div>
+        </Html>
+      )}
       {/* Main satellite body */}
-      <mesh>
+      <mesh
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
+      >
         <boxGeometry args={[0.08, 0.08, 0.12]} />
-        <meshStandardMaterial color="#00d4ff" metalness={0.8} roughness={0.2} />
+        <meshStandardMaterial 
+          color="#00d4ff" 
+          metalness={0.8} 
+          roughness={0.2}
+          emissive="#00d4ff"
+          emissiveIntensity={hovered ? 0.5 : 0}
+        />
       </mesh>
       {/* Solar panels */}
       <mesh position={[0.1, 0, 0]}>
@@ -256,6 +387,7 @@ function Satellite({ index, total }) {
 // Probe component
 function Probe({ index, total }) {
   const probeRef = useRef();
+  const [hovered, setHovered] = useState(false);
   const radius = 2.8;
   const speed = 0.6;
   const offset = (index * Math.PI * 2) / total + Math.PI; // Offset from satellites
@@ -273,10 +405,30 @@ function Probe({ index, total }) {
 
   return (
     <group ref={probeRef}>
+      {/* Tooltip */}
+      {hovered && (
+        <Html distanceFactor={10}>
+          <div className="bg-black/90 text-white px-3 py-2 rounded-lg border border-neon-green text-xs font-mono whitespace-nowrap pointer-events-none">
+            <div className="font-bold text-neon-green">🚀 Deflection Probe</div>
+            <div className="text-gray-300">Ready to intercept threats</div>
+            <div className="text-gray-400">Kinetic impactor system</div>
+          </div>
+        </Html>
+      )}
       {/* Probe body - cone shape */}
-      <mesh rotation={[0, 0, Math.PI / 2]}>
+      <mesh 
+        rotation={[0, 0, Math.PI / 2]}
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
+      >
         <coneGeometry args={[0.06, 0.15, 8]} />
-        <meshStandardMaterial color="#00ff88" metalness={0.7} roughness={0.3} />
+        <meshStandardMaterial 
+          color="#00ff88" 
+          metalness={0.7} 
+          roughness={0.3}
+          emissive="#00ff88"
+          emissiveIntensity={hovered ? 0.5 : 0}
+        />
       </mesh>
       {/* Engine glow */}
       <mesh position={[-0.08, 0, 0]}>
@@ -326,7 +478,7 @@ function ResearchStation({ index }) {
 }
 
 // Main 3D Scene
-function Scene({ threats, gameState }) {
+function Scene({ threats, gameState, onDeflectAsteroid }) {
   return (
     <>
       {/* Ambient light for overall illumination */}
@@ -404,7 +556,12 @@ function Scene({ threats, gameState }) {
       
       {/* Asteroid threat markers */}
       {threats.slice(0, 5).map((threat, index) => (
-        <AsteroidMarker key={threat.id} threat={threat} index={index} />
+        <AsteroidMarker 
+          key={threat.id} 
+          threat={threat} 
+          index={index}
+          onDeflect={onDeflectAsteroid}
+        />
       ))}
       
       {/* Camera controls */}
@@ -421,14 +578,14 @@ function Scene({ threats, gameState }) {
 }
 
 // Main Earth3D component
-const Earth3D = ({ threats = [], gameState = null }) => {
+const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null }) => {
   return (
     <div className="w-full h-full bg-black rounded-lg overflow-hidden relative">
       <Canvas
         camera={{ position: [0, 3, 8], fov: 50 }}
         gl={{ antialias: true, alpha: false }}
       >
-        <Scene threats={threats} gameState={gameState} />
+        <Scene threats={threats} gameState={gameState} onDeflectAsteroid={onDeflectAsteroid} />
       </Canvas>
     </div>
   );

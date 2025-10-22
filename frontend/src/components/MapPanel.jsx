@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext';
 import Earth3D from './Earth3D';
+import Toast from './Toast';
 
 const MapPanel = ({ gameState, events, threats }) => {
   const { processAction } = useGame();
   const [selectedThreat, setSelectedThreat] = useState(null);
   const [deflecting, setDeflecting] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const getThreatColor = (riskLevel) => {
     switch (riskLevel) {
@@ -35,14 +37,35 @@ const MapPanel = ({ gameState, events, threats }) => {
         resource: 'probe'
       });
       
-      if (result && result.message) {
-        alert(result.message); // Temporary - could be replaced with a toast
+      if (result && result.success) {
+        // Success notification
+        setToast({
+          type: 'success',
+          message: {
+            title: '🎯 Asteroid Deflected!',
+            description: `${threat.title} has been successfully redirected. Earth is safe!`
+          }
+        });
+        setSelectedThreat(null);
+      } else {
+        // Failure notification
+        setToast({
+          type: 'error',
+          message: {
+            title: '❌ Deflection Failed',
+            description: result?.message || 'Insufficient resources or asteroid already deflected.'
+          }
+        });
       }
-      
-      setSelectedThreat(null);
     } catch (error) {
       console.error('Failed to deflect asteroid:', error);
-      alert('Failed to deflect asteroid');
+      setToast({
+        type: 'error',
+        message: {
+          title: '❌ Mission Error',
+          description: 'Critical failure in deflection system. Try again.'
+        }
+      });
     } finally {
       setDeflecting(false);
     }
@@ -61,7 +84,11 @@ const MapPanel = ({ gameState, events, threats }) => {
 
       {/* 3D Earth Visualization */}
       <div className="flex-1 relative rounded-lg overflow-hidden mb-2 min-h-[200px]">
-        <Earth3D threats={threats} gameState={gameState} />
+        <Earth3D 
+          threats={threats} 
+          gameState={gameState}
+          onDeflectAsteroid={handleDeflect}
+        />
 
         {/* Earth Status Overlay */}
         <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-sm rounded-lg p-2 border border-neon-blue/30">
@@ -184,6 +211,16 @@ const MapPanel = ({ gameState, events, threats }) => {
             </div>
           </motion.div>
         </motion.div>
+      )}
+      
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+          duration={4000}
+        />
       )}
     </div>
   );
