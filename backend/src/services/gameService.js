@@ -334,7 +334,7 @@ class GameService {
   }
 
   // Advance to next day
-  advanceDay() {
+  async advanceDay() {
     this.gameState.day++;
     
     // Process unhandled threats - they cause damage!
@@ -363,7 +363,7 @@ class GameService {
     this.gameState.satellites = Math.min(5, this.gameState.satellites + 1);
     this.gameState.probes = Math.min(3, this.gameState.probes + 1);
     
-    // Generate daily funds (reduced if reputation is low)
+    // Generate daily funds (bonus based on reputation)
     const fundBonus = Math.max(0, this.gameState.reputation) * 500;
     this.gameState.funds += 50000 + fundBonus;
     
@@ -374,6 +374,9 @@ class GameService {
     
     // Cap earth damage at 100%
     this.gameState.earthDamage = Math.min(100, this.gameState.earthDamage);
+    
+    // Generate new events for the new day
+    await this.generateEvents();
     
     return this.gameState;
   }

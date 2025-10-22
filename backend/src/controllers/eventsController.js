@@ -96,7 +96,7 @@ export const purchaseUpgrade = async (req, res) => {
 
 export const advanceDay = async (req, res) => {
   try {
-    const gameState = gameService.advanceDay();
+    const gameState = await gameService.advanceDay();
     res.json({
       success: true,
       gameState: gameState

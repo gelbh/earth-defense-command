@@ -24,6 +24,13 @@ const GameDashboard = () => {
     loadInitialEvents();
   }, []); // Only run once on mount
 
+  // Sync local events with gameState.events whenever it changes
+  useEffect(() => {
+    if (gameState && gameState.events && gameState.events.length > 0) {
+      setEvents(gameState.events);
+    }
+  }, [gameState]);
+
   if (loading && !gameState) {
     return (
       <div className="flex items-center justify-center h-screen">
