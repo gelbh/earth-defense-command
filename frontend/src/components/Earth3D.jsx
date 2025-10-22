@@ -361,17 +361,21 @@ function OrbitRing({ radius, color = '#4477ff', opacity = 0.1 }) {
   );
 }
 
-// Satellite component
-function Satellite({ index, total }) {
+// Satellite component with detection radius
+function Satellite({ satellite, index }) {
   const satelliteRef = useRef();
   const [hovered, setHovered] = useState(false);
   const radius = 2.5; // Close orbit for satellites
   const speed = 0.8;
-  const offset = (index * Math.PI * 2) / total;
+  
+  // Use satellite's orbit position or calculate from index
+  const orbitPosition = satellite?.orbitPosition || (index * Math.PI * 2) / 3;
+  const detectionRadius = satellite?.detectionRadius || 3.5;
+  const level = satellite?.level || 1;
   
   useFrame(({ clock }) => {
     if (satelliteRef.current) {
-      const t = clock.getElapsedTime() * speed + offset;
+      const t = clock.getElapsedTime() * speed + orbitPosition;
       satelliteRef.current.position.x = Math.cos(t) * radius;
       satelliteRef.current.position.z = Math.sin(t) * radius;
       satelliteRef.current.position.y = Math.sin(t * 2) * 0.2;
@@ -382,13 +386,38 @@ function Satellite({ index, total }) {
 
   return (
     <group ref={satelliteRef}>
+      {/* Detection Radius Circle - always visible */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <ringGeometry args={[detectionRadius - 0.1, detectionRadius, 64]} />
+        <meshBasicMaterial 
+          color="#00d4ff" 
+          transparent 
+          opacity={hovered ? 0.3 : 0.15} 
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      
+      {/* Radar sweep effect */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <circleGeometry args={[detectionRadius, 64]} />
+        <meshBasicMaterial 
+          color="#00d4ff" 
+          transparent 
+          opacity={0.05} 
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      
       {/* Tooltip */}
       {hovered && (
         <Html distanceFactor={10}>
-          <div className="bg-black/90 text-white px-3 py-2 rounded-lg border border-neon-blue text-xs font-mono whitespace-nowrap pointer-events-none">
-            <div className="font-bold text-neon-blue">🛰️ Monitoring Satellite</div>
-            <div className="text-gray-300">Detects incoming threats</div>
-            <div className="text-gray-400">Orbital tracking system</div>
+          <div className="bg-black/95 text-white px-3 py-2 rounded-lg border-2 border-neon-blue text-xs font-mono whitespace-nowrap pointer-events-none shadow-2xl">
+            <div className="font-bold text-neon-blue text-sm mb-1">🛰️ Satellite Level {level}</div>
+            <div className="text-gray-300">Detection Radius: {detectionRadius.toFixed(1)} units</div>
+            <div className="text-gray-400">Status: Operational</div>
+            <div className="text-neon-green mt-2 border-t border-gray-600 pt-1 text-center">
+              🖱️ Click to upgrade
+            </div>
           </div>
         </Html>
       )}
@@ -426,17 +455,21 @@ function Satellite({ index, total }) {
   );
 }
 
-// Probe component
-function Probe({ index, total }) {
+// Probe component with laser capabilities
+function Probe({ probe, index }) {
   const probeRef = useRef();
   const [hovered, setHovered] = useState(false);
   const radius = 2.8;
   const speed = 0.6;
-  const offset = (index * Math.PI * 2) / total + Math.PI; // Offset from satellites
+  
+  // Use probe's orbit position or calculate from index
+  const orbitPosition = probe?.orbitPosition || (index * Math.PI * 2) / 3 + Math.PI;
+  const level = probe?.level || 1;
+  const laserPower = probe?.laserPower || 100;
   
   useFrame(({ clock }) => {
     if (probeRef.current) {
-      const t = clock.getElapsedTime() * speed + offset;
+      const t = clock.getElapsedTime() * speed + orbitPosition;
       probeRef.current.position.x = Math.cos(t) * radius;
       probeRef.current.position.z = Math.sin(t) * radius;
       probeRef.current.position.y = Math.cos(t * 1.5) * 0.3;
@@ -450,10 +483,13 @@ function Probe({ index, total }) {
       {/* Tooltip */}
       {hovered && (
         <Html distanceFactor={10}>
-          <div className="bg-black/90 text-white px-3 py-2 rounded-lg border border-neon-green text-xs font-mono whitespace-nowrap pointer-events-none">
-            <div className="font-bold text-neon-green">🚀 Deflection Probe</div>
-            <div className="text-gray-300">Ready to intercept threats</div>
-            <div className="text-gray-400">Kinetic impactor system</div>
+          <div className="bg-black/95 text-white px-3 py-2 rounded-lg border-2 border-neon-green text-xs font-mono whitespace-nowrap pointer-events-none shadow-2xl">
+            <div className="font-bold text-neon-green text-sm mb-1">🚀 Probe Level {level}</div>
+            <div className="text-gray-300">Laser Power: {laserPower}%</div>
+            <div className="text-gray-400">Status: Armed</div>
+            <div className="text-yellow-400 mt-2 border-t border-gray-600 pt-1 text-center">
+              🖱️ Click to upgrade
+            </div>
           </div>
         </Html>
       )}
@@ -554,14 +590,14 @@ function Scene({ threats, gameState, onDeflectAsteroid }) {
       <OrbitRing radius={3.5} opacity={0.08} />
       <OrbitRing radius={4} opacity={0.06} />
       
-      {/* Deployed Satellites */}
-      {gameState && Array.from({ length: gameState.satellites }).map((_, index) => (
-        <Satellite key={`sat-${index}`} index={index} total={gameState.satellites} />
+      {/* Deployed Satellites with detection radii */}
+      {gameState && Array.isArray(gameState.satellites) && gameState.satellites.map((satellite, index) => (
+        <Satellite key={satellite.id || `sat-${index}`} satellite={satellite} index={index} />
       ))}
       
       {/* Deployed Probes */}
-      {gameState && Array.from({ length: gameState.probes }).map((_, index) => (
-        <Probe key={`probe-${index}`} index={index} total={gameState.probes} />
+      {gameState && Array.isArray(gameState.probes) && gameState.probes.map((probe, index) => (
+        <Probe key={probe.id || `probe-${index}`} probe={probe} index={index} />
       ))}
       
       {/* Research Stations */}

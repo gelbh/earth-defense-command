@@ -7,8 +7,8 @@ class GameService {
       score: 0,
       funds: 1000000, // $1M starting funds
       power: 100, // Power percentage
-      satellites: 2, // Satellites DEPLOYED in orbit (visible in 3D)
-      probes: 1, // Probes DEPLOYED in orbit (visible in 3D)
+      satellites: [], // Array of deployed satellites with properties
+      probes: [], // Array of deployed probes with properties
       availableProbes: 2, // Probes available for deflection missions
       researchTeams: 1, // Active research teams
       upgrades: {
@@ -23,6 +23,17 @@ class GameService {
       reputation: 100
     };
     
+    // Initialize starting satellites with detection capabilities
+    this.gameState.satellites = [
+      this.createSatellite(0),
+      this.createSatellite(1)
+    ];
+    
+    // Initialize starting probes
+    this.gameState.probes = [
+      this.createProbe(0)
+    ];
+    
     this.eventTypes = [
       'asteroid_detected',
       'solar_flare',
@@ -32,9 +43,52 @@ class GameService {
     ];
   }
 
-  // Get current game state
+  // Create a satellite with detection capabilities
+  createSatellite(index) {
+    const totalSatellites = this.gameState.satellites.length + 1;
+    const angleSpacing = (Math.PI * 2) / Math.max(3, totalSatellites); // Space evenly
+    
+    return {
+      id: `sat-${Date.now()}-${index}`,
+      orbitPosition: index * angleSpacing, // Angle in orbit (radians)
+      detectionRadius: 3.5, // Base detection radius (game units)
+      level: 1, // Upgrade level
+      type: 'standard', // standard, infrared, radio
+      health: 100,
+      powerDrain: 5 // Power % per day
+    };
+  }
+
+  // Create a probe with deflection capabilities
+  createProbe(index) {
+    const totalProbes = this.gameState.probes.length + 1;
+    const angleSpacing = (Math.PI * 2) / Math.max(3, totalProbes);
+    
+    return {
+      id: `probe-${Date.now()}-${index}`,
+      orbitPosition: index * angleSpacing + Math.PI, // Offset from satellites
+      level: 1, // Determines laser power
+      fireArc: Math.PI, // Can target 180 degrees
+      laserPower: 100, // Base damage
+      type: 'kinetic', // kinetic, laser, nuclear
+      health: 100
+    };
+  }
+
+  // Get current game state with filtered threats (only detected asteroids visible)
   getGameState() {
-    return this.gameState;
+    // Filter threats to only show detected asteroids
+    const visibleThreats = this.gameState.threats.filter(threat => {
+      if (threat.type !== 'asteroid_detected') return true; // Other events always visible
+      return this.isAsteroidDetected(threat); // Only show detected asteroids
+    });
+    
+    return {
+      ...this.gameState,
+      threats: visibleThreats,
+      allThreats: this.gameState.threats.length, // Total threats (including undetected)
+      detectedThreats: visibleThreats.length // Detected threats
+    };
   }
 
   // Update game state
@@ -162,6 +216,36 @@ class GameService {
     return Math.min(0.9, baseProbability); // Cap at 90%
   }
 
+  // Check if an asteroid is detected by any satellite
+  isAsteroidDetected(asteroid) {
+    if (!asteroid.data) return false;
+    
+    // Calculate asteroid's current position in 3D space based on approach angle
+    const approachAngle = asteroid.data.approachAngle || 0;
+    const distance = asteroid.data.distance || 1000000;
+    
+    // Check if within range of any satellite
+    for (const satellite of this.gameState.satellites) {
+      const satAngle = satellite.orbitPosition;
+      const detectionRadius = satellite.detectionRadius;
+      
+      // Simple angular distance check (more sophisticated in 3D, but this works for gameplay)
+      const angleDiff = Math.abs(satAngle - approachAngle);
+      const normalizedDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
+      
+      // If asteroid is in this satellite's coverage arc and within radius
+      const coverageArc = Math.PI / 2; // 90 degrees each side
+      const distanceInRange = distance / 100000; // Scale to game units
+      
+      if (normalizedDiff < coverageArc && distanceInRange < detectionRadius) {
+        asteroid.detectedBy = satellite.id;
+        return true;
+      }
+    }
+    
+    return false; // Not detected by any satellite!
+  }
+
   // Generate random events for game variety
   generateRandomEvent() {
     const eventType = this.eventTypes[Math.floor(Math.random() * this.eventTypes.length)];
@@ -219,11 +303,13 @@ class GameService {
           result.message = 'Insufficient power (10% required)';
           break;
         }
-        this.gameState.satellites++; // ADD a satellite to orbit
+        // ADD a new satellite to the array
+        const newSatellite = this.createSatellite(this.gameState.satellites.length);
+        this.gameState.satellites.push(newSatellite);
         this.gameState.funds -= 150000;
         this.gameState.power -= 10;
         result.success = true;
-        result.message = 'New satellite deployed to orbit';
+        result.message = `Satellite deployed! Detection coverage increased.`;
         result.scoreChange = 50;
         break;
 
@@ -232,11 +318,13 @@ class GameService {
           result.message = 'Insufficient funds ($200K required)';
           break;
         }
-        this.gameState.probes++; // ADD a probe to orbit
+        // ADD a new probe to the array
+        const newProbe = this.createProbe(this.gameState.probes.length);
+        this.gameState.probes.push(newProbe);
         this.gameState.availableProbes++; // Also add to available for deflection
         this.gameState.funds -= 200000;
         result.success = true;
-        result.message = 'New probe launched to orbit';
+        result.message = 'New probe launched and ready';
         result.scoreChange = 100;
         break;
 

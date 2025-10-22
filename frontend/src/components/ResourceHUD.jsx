@@ -89,7 +89,7 @@ const ResourceHUD = ({ gameState, onHelpClick }) => {
               <div>
                 <p className="text-xs text-gray-400 font-mono">SATELLITES</p>
                 <p className="text-sm font-bold text-neon-blue">
-                  {gameState.satellites}/5
+                  {Array.isArray(gameState.satellites) ? gameState.satellites.length : 0} deployed
                 </p>
               </div>
             </div>
@@ -105,7 +105,7 @@ const ResourceHUD = ({ gameState, onHelpClick }) => {
                   {gameState.availableProbes || 0} ready
                 </p>
                 <p className="text-xs text-gray-500">
-                  ({gameState.probes} deployed)
+                  ({Array.isArray(gameState.probes) ? gameState.probes.length : 0} deployed)
                 </p>
               </div>
             </div>
