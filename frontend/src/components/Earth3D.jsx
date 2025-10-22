@@ -119,6 +119,82 @@ function createAsteroidGeometry(size, seed) {
   return geometry;
 }
 
+// Atmospheric Burnup Effect
+function BurnupEffect({ position, intensity = 1 }) {
+  const fireballRef = useRef();
+  const trailRef = useRef();
+  const [opacity, setOpacity] = useState(1);
+  
+  useFrame(({ clock }) => {
+    if (fireballRef.current) {
+      // Pulsing fire effect
+      const pulse = Math.sin(clock.getElapsedTime() * 20) * 0.3 + 0.7;
+      fireballRef.current.material.opacity = pulse * opacity;
+      
+      // Scale fireball
+      const scale = 1 + Math.sin(clock.getElapsedTime() * 15) * 0.3;
+      fireballRef.current.scale.set(scale, scale, scale);
+    }
+    
+    // Fade out over time
+    setOpacity(prev => Math.max(0, prev - 0.01));
+  });
+  
+  if (opacity <= 0) return null;
+  
+  return (
+    <group position={position}>
+      {/* Main fireball */}
+      <mesh ref={fireballRef}>
+        <sphereGeometry args={[0.15 * intensity, 16, 16]} />
+        <meshBasicMaterial 
+          color="#ff4400" 
+          transparent 
+          opacity={0.8}
+        />
+      </mesh>
+      
+      {/* Inner core */}
+      <mesh>
+        <sphereGeometry args={[0.08 * intensity, 12, 12]} />
+        <meshBasicMaterial 
+          color="#ffaa00" 
+          transparent 
+          opacity={0.9}
+        />
+      </mesh>
+      
+      {/* Bright center */}
+      <mesh>
+        <sphereGeometry args={[0.04 * intensity, 8, 8]} />
+        <meshBasicMaterial 
+          color="#ffffff" 
+          transparent 
+          opacity={1}
+        />
+      </mesh>
+      
+      {/* Glow effect */}
+      <pointLight 
+        position={[0, 0, 0]} 
+        intensity={intensity * 3} 
+        color="#ff6600" 
+        distance={2} 
+      />
+      
+      {/* Trail particles */}
+      <mesh ref={trailRef} position={[0, -0.2, 0]}>
+        <coneGeometry args={[0.1 * intensity, 0.4, 8]} />
+        <meshBasicMaterial 
+          color="#ff8800" 
+          transparent 
+          opacity={0.6}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 // Asteroid marker component - APPROACHING Earth (not orbiting)
 function AsteroidMarker({ threat, index, onDeflect }) {
   const markerRef = useRef();

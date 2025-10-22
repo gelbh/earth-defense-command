@@ -246,6 +246,55 @@ class GameService {
     return false; // Not detected by any satellite!
   }
 
+  // Calculate if an asteroid will burn up in atmosphere using simplified Chapman equation
+  calculateAtmosphericBurnup(asteroid) {
+    if (!asteroid.data) return { willBurnUp: false };
+    
+    const diameter = asteroid.data.diameter || 50; // meters
+    const velocity = asteroid.data.velocity || 20000; // m/s
+    const density = 3000; // kg/m³ (typical rocky asteroid)
+    const distance = asteroid.data.distance || 1000000; // km
+    
+    // Constants
+    const ATMOSPHERE_HEIGHT = 100; // km - Karman line
+    const AIR_DENSITY_SEA_LEVEL = 1.225; // kg/m³
+    const SCALE_HEIGHT = 8.5; // km - atmospheric scale height
+    
+    // Check if asteroid is entering atmosphere
+    if (distance > ATMOSPHERE_HEIGHT) {
+      return { willBurnUp: false };
+    }
+    
+    // Calculate current atmospheric density using barometric formula
+    const altitude = distance; // km above surface
+    const atmosphericDensity = AIR_DENSITY_SEA_LEVEL * Math.exp(-altitude / SCALE_HEIGHT);
+    
+    // Calculate mass and cross-sectional area
+    const radius = diameter / 2; // meters
+    const volume = (4/3) * Math.PI * Math.pow(radius, 3);
+    const mass = density * volume; // kg
+    const crossSection = Math.PI * Math.pow(radius, 2); // m²
+    
+    // Calculate ablation parameter (simplified)
+    // Smaller, faster objects with less mass burn up more easily
+    const dragCoefficient = 1.0; // typical for irregular asteroids
+    const dragForce = 0.5 * atmosphericDensity * Math.pow(velocity, 2) * crossSection * dragCoefficient;
+    const deceleration = dragForce / mass;
+    
+    // Critical diameter for burn-up at this velocity (empirical formula)
+    // Objects smaller than ~25m typically burn up completely
+    const criticalDiameter = 25 * Math.pow(velocity / 20000, 0.5);
+    
+    const willBurnUp = diameter < criticalDiameter && distance < 50; // Within 50km altitude
+    
+    return {
+      willBurnUp,
+      burnupAltitude: altitude,
+      energyReleased: 0.5 * mass * Math.pow(velocity, 2), // Joules
+      visualIntensity: willBurnUp ? Math.min(1, diameter / 10) : 0
+    };
+  }
+
   // Generate random events for game variety
   generateRandomEvent() {
     const eventType = this.eventTypes[Math.floor(Math.random() * this.eventTypes.length)];
@@ -510,7 +559,45 @@ class GameService {
   // Advance to next day
   async advanceDay() {
     this.gameState.day++;
-        // Process unhandled threats - they cause damage!
+    
+    // Check for atmospheric burn-up FIRST
+    const burnedUpAsteroids = [];
+    this.gameState.threats = this.gameState.threats.filter(threat => {
+      if (threat.type !== 'asteroid_detected') return true; // Keep non-asteroid threats
+      
+      const burnupResult = this.calculateAtmosphericBurnup(threat);
+      
+      if (burnupResult.willBurnUp) {
+        burnedUpAsteroids.push({
+          name: threat.data?.name || 'Unknown',
+          diameter: threat.data?.diameter || 0,
+          altitude: burnupResult.burnupAltitude
+        });
+        return false; // Remove from threats - burned up!
+      }
+      
+      return true; // Keep asteroids that don't burn up
+    });
+    
+    // Add events for burned-up asteroids
+    if (burnedUpAsteroids.length > 0) {
+      burnedUpAsteroids.forEach(asteroid => {
+        this.gameState.events.push({
+          id: `burnup-${Date.now()}-${Math.random()}`,
+          type: 'atmospheric_burnup',
+          severity: 'low',
+          title: '🔥 Atmospheric Burn-up',
+          description: `${asteroid.name} (${asteroid.diameter}m) safely burned up at ${asteroid.altitude.toFixed(1)}km altitude`,
+          timestamp: new Date().toISOString(),
+          icon: '🔥'
+        });
+      });
+      
+      // Award points for natural burn-ups
+      this.gameState.score += burnedUpAsteroids.length * 50;
+    }
+    
+    // Process unhandled threats - they cause damage!
     const criticalThreats = this.gameState.threats.filter(t => t.severity === 'critical');
     const moderateThreats = this.gameState.threats.filter(t => t.severity === 'moderate');
     
