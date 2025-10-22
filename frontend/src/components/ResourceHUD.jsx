@@ -102,7 +102,10 @@ const ResourceHUD = ({ gameState, onHelpClick }) => {
               <div>
                 <p className="text-xs text-gray-400 font-mono">PROBES</p>
                 <p className="text-sm font-bold text-neon-blue">
-                  {gameState.probes}/3
+                  {gameState.availableProbes || 0} ready
+                </p>
+                <p className="text-xs text-gray-500">
+                  ({gameState.probes} deployed)
                 </p>
               </div>
             </div>

@@ -193,14 +193,14 @@ const MapPanel = ({ gameState, events, threats }) => {
             <div className="mt-4 flex gap-2">
               <button
                 onClick={() => handleDeflect(selectedThreat)}
-                disabled={deflecting || gameState.probes <= 0 || gameState.funds < 200000}
+                disabled={deflecting || (gameState.availableProbes || 0) <= 0}
                 className={`flex-1 font-bold py-2 px-4 rounded transition-colors ${
-                  deflecting || gameState.probes <= 0 || gameState.funds < 200000
+                  deflecting || (gameState.availableProbes || 0) <= 0
                     ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                     : 'bg-neon-green hover:bg-green-500 text-black'
                 }`}
               >
-                {deflecting ? 'Deflecting...' : `🚀 Deflect ($200K, 1 Probe)`}
+                {deflecting ? 'Deflecting...' : `🚀 Deflect (1 Probe)`}
               </button>
               <button
                 onClick={() => setSelectedThreat(null)}

@@ -7,9 +7,10 @@ class GameService {
       score: 0,
       funds: 1000000, // $1M starting funds
       power: 100, // Power percentage
-      satellites: 3, // Available satellites
-      probes: 2, // Available probes
-      researchTeams: 1, // Available research teams
+      satellites: 2, // Satellites DEPLOYED in orbit (visible in 3D)
+      probes: 1, // Probes DEPLOYED in orbit (visible in 3D)
+      availableProbes: 2, // Probes available for deflection missions
+      researchTeams: 1, // Active research teams
       upgrades: {
         aiTracking: false,
         improvedRadar: false,
@@ -183,26 +184,32 @@ class GameService {
 
     switch (type) {
       case 'deploy_satellite':
-        if (this.gameState.satellites <= 0) {
-          result.message = 'No satellites available';
+        if (this.gameState.funds < 150000) {
+          result.message = 'Insufficient funds ($150K required)';
           break;
         }
-        this.gameState.satellites--;
+        if (this.gameState.power < 10) {
+          result.message = 'Insufficient power (10% required)';
+          break;
+        }
+        this.gameState.satellites++; // ADD a satellite to orbit
+        this.gameState.funds -= 150000;
         this.gameState.power -= 10;
         result.success = true;
-        result.message = 'Satellite deployed successfully';
+        result.message = 'New satellite deployed to orbit';
         result.scoreChange = 50;
         break;
 
       case 'launch_probe':
-        if (this.gameState.probes <= 0) {
-          result.message = 'No probes available';
+        if (this.gameState.funds < 200000) {
+          result.message = 'Insufficient funds ($200K required)';
           break;
         }
-        this.gameState.probes--;
-        this.gameState.funds -= 100000;
+        this.gameState.probes++; // ADD a probe to orbit
+        this.gameState.availableProbes++; // Also add to available for deflection
+        this.gameState.funds -= 200000;
         result.success = true;
-        result.message = 'Probe launched successfully';
+        result.message = 'New probe launched to orbit';
         result.scoreChange = 100;
         break;
 
@@ -224,13 +231,13 @@ class GameService {
           break;
         }
         
-        if (this.gameState.probes <= 0) {
-          result.message = 'No probes available for deflection';
+        if (this.gameState.availableProbes <= 0) {
+          result.message = 'No probes available for deflection mission';
           break;
         }
 
-        this.gameState.probes--;
-        this.gameState.funds -= 200000;
+        this.gameState.availableProbes--; // Use an available probe
+        // Note: probe stays in orbit, just used for this mission
         
         // Calculate success based on asteroid size and player upgrades
         const successChance = this.calculateDeflectionSuccess(threat.data);
@@ -323,7 +330,7 @@ class GameService {
         this.gameState.power += 20;
         break;
       case 'quantumDrive':
-        this.gameState.probes += 1;
+        this.gameState.availableProbes += 2; // Quantum tech gives 2 extra deflection missions
         break;
       case 'publicSupport':
         this.gameState.funds += 100000; // Bonus funds
@@ -359,8 +366,12 @@ class GameService {
     
     // Restore some resources daily
     this.gameState.power = Math.min(100, this.gameState.power + 20);
-    this.gameState.satellites = Math.min(5, this.gameState.satellites + 1);
-    this.gameState.probes = Math.min(3, this.gameState.probes + 1);
+    // Satellites and orbital probes stay deployed - they don't replenish
+    // But available probe missions restore
+    this.gameState.availableProbes = Math.min(
+      this.gameState.probes, // Can't have more available than deployed
+      this.gameState.availableProbes + 1
+    );
     
     // Generate daily funds (bonus based on reputation)
     const fundBonus = Math.max(0, this.gameState.reputation) * 500;

@@ -70,15 +70,16 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
           whileHover="hover"
           whileTap="tap"
           onClick={() => handleAction('deploy_satellite')}
-          disabled={loading || gameState.satellites <= 0}
+          disabled={loading || gameState.funds < 150000 || gameState.power < 10}
           className={`p-1.5 rounded font-mono text-xs font-bold transition-all ${
-            gameState.satellites <= 0
+            gameState.funds < 150000 || gameState.power < 10
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-neon-blue hover:bg-blue-500 text-white glow-blue'
           }`}
         >
           <div className="text-sm">🛰️</div>
-          <div className="text-xs leading-tight">Satellite ({gameState.satellites})</div>
+          <div className="text-xs leading-tight">Deploy Sat</div>
+          <div className="text-xs text-gray-300">$150K</div>
         </motion.button>
 
         <motion.button
@@ -86,15 +87,16 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
           whileHover="hover"
           whileTap="tap"
           onClick={() => handleAction('launch_probe')}
-          disabled={loading || gameState.probes <= 0 || gameState.funds < 100000}
+          disabled={loading || gameState.funds < 200000}
           className={`p-1.5 rounded font-mono text-xs font-bold transition-all ${
-            gameState.probes <= 0 || gameState.funds < 100000
+            gameState.funds < 200000
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-neon-green hover:bg-green-500 text-black glow-green'
           }`}
         >
           <div className="text-sm">🚀</div>
-          <div className="text-xs leading-tight">Probe ({gameState.probes})</div>
+          <div className="text-xs leading-tight">Launch Probe</div>
+          <div className="text-xs text-gray-700">$200K</div>
         </motion.button>
 
         {/* Vertical Separator + Advance Day */}
