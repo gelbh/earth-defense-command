@@ -14,47 +14,26 @@ function Earth() {
     }
   });
 
-  // Use CORS-friendly Earth texture from reliable CDN sources
-  // These are equirectangular projections that wrap the entire sphere
-  const earthTextureOptions = [
-    'https://unpkg.com/three-globe@2.24.4/example/img/earth-blue-marble.jpg',
-    'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg',
-    'https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/textures/planets/earth_atmos_2048.jpg'
-  ];
+  // Use reliable CORS-friendly Earth texture
+  // Using jsdelivr CDN which is fast and reliable
+  const earthTextureUrl = 'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg';
   
-  const [textureUrl] = React.useState(earthTextureOptions[0]);
-  let texture = null;
-  
-  try {
-    texture = useLoader(THREE.TextureLoader, textureUrl);
-  } catch (error) {
-    console.warn('Failed to load Earth texture, using procedural fallback');
-  }
+  const texture = useLoader(THREE.TextureLoader, earthTextureUrl);
 
-  // Create Earth material
+  // Create Earth material with texture
   const earthMaterial = useMemo(() => {
-    if (texture) {
-      // Configure texture for proper sphere mapping
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.minFilter = THREE.LinearMipmapLinearFilter;
-      texture.magFilter = THREE.LinearFilter;
-      texture.anisotropy = 16; // Better quality at angles
-      
-      return new THREE.MeshStandardMaterial({
-        map: texture,
-        roughness: 0.9,
-        metalness: 0.1,
-      });
-    } else {
-      // Fallback procedural Earth with continents-like pattern
-      return new THREE.MeshStandardMaterial({
-        color: '#1a4d80',
-        emissive: '#0a1a2e',
-        roughness: 0.9,
-        metalness: 0.1,
-      });
-    }
+    // Configure texture for proper sphere mapping
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.anisotropy = 16; // Better quality at angles
+    
+    return new THREE.MeshStandardMaterial({
+      map: texture,
+      roughness: 0.9,
+      metalness: 0.1,
+    });
   }, [texture]);
 
   return (
@@ -72,36 +51,43 @@ function Earth() {
   );
 }
 
-// Fallback Earth (no texture)
+// Fallback Earth (loading or error state)
 function FallbackEarth() {
   const earthRef = useRef();
   
   useFrame(() => {
     if (earthRef.current) {
-      earthRef.current.rotation.y += 0.002;
+      earthRef.current.rotation.y += 0.005; // Faster rotation to show it's loading
     }
   });
 
   const earthMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: '#2233ff',
-      emissive: '#112244',
+      color: '#1a4d80', // Darker blue
+      emissive: '#0a1a2e',
       roughness: 0.9,
       metalness: 0.1,
     });
   }, []);
 
   return (
-    <Sphere ref={earthRef} args={[2, 64, 64]} material={earthMaterial}>
-      <Sphere args={[2.05, 64, 64]}>
-        <meshBasicMaterial
-          color="#4477ff"
-          transparent
-          opacity={0.1}
-          side={THREE.BackSide}
-        />
+    <group ref={earthRef}>
+      <Sphere args={[2, 64, 64]} material={earthMaterial}>
+        <Sphere args={[2.05, 64, 64]}>
+          <meshBasicMaterial
+            color="#4477ff"
+            transparent
+            opacity={0.15}
+            side={THREE.BackSide}
+          />
+        </Sphere>
       </Sphere>
-    </Sphere>
+      {/* Loading indicator - pulsing ring */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[2.3, 0.02, 16, 100]} />
+        <meshBasicMaterial color="#00d4ff" transparent opacity={0.5} />
+      </mesh>
+    </group>
   );
 }
 
