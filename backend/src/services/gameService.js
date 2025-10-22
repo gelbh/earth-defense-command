@@ -340,6 +340,7 @@ class GameService {
     // Restore some resources daily
     this.gameState.power = Math.min(100, this.gameState.power + 20);
     this.gameState.satellites = Math.min(5, this.gameState.satellites + 1);
+    this.gameState.probes = Math.min(3, this.gameState.probes + 1);
     
     // Generate daily funds
     this.gameState.funds += 50000;
