@@ -2,35 +2,104 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: #0B1426;
+  color: #ffffff;
 }
 
 .App-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 2rem;
+  background: linear-gradient(135deg, #0B1426 0%, #1A1A1A 100%);
+  padding: 1.5rem 2rem;
   text-align: center;
+  border-bottom: 2px solid #00D4FF;
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.1);
 }
 
-.App-header h1 {
-  font-size: 3rem;
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.game-title {
+  font-size: 2.5rem;
+  font-weight: 700;
   margin-bottom: 0.5rem;
+  color: #00D4FF;
+  text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
 }
 
-.App-header p {
-  font-size: 1.2rem;
-  opacity: 0.9;
+.title-icon {
+  font-size: 3rem;
+  animation: float 6s ease-in-out infinite;
+}
+
+.game-subtitle {
+  font-size: 1.1rem;
+  color: #ffffff;
+  opacity: 0.8;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 1px;
 }
 
 .App-main {
   flex: 1;
-  padding-bottom: 2rem;
+  padding: 0;
+  overflow: hidden;
 }
 
+.App-footer {
+  background: #1A1A1A;
+  padding: 1rem 2rem;
+  text-align: center;
+  border-top: 1px solid #2D2D2D;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.App-footer p {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Responsive design */
 @media (max-width: 768px) {
-  .App-header h1 {
+  .game-title {
+    font-size: 2rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .title-icon {
+    font-size: 2.5rem;
+  }
+  
+  .game-subtitle {
+    font-size: 1rem;
+  }
+  
+  .App-header {
+    padding: 1rem;
+  }
+  
+  .App-footer {
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-title {
+    font-size: 1.5rem;
+  }
+  
+  .title-icon {
     font-size: 2rem;
   }
-
-  .App-header p {
-    font-size: 1rem;
+  
+  .game-subtitle {
+    font-size: 0.9rem;
   }
 }
