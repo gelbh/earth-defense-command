@@ -86,8 +86,8 @@ const MapPanel = ({ gameState, events, threats }) => {
             No active threats detected
           </p>
         ) : (
-          <div className="space-y-1 max-h-24 overflow-y-auto">
-            {threats.slice(0, 3).map((threat) => (
+          <div className="grid grid-cols-2 gap-1 max-h-24 overflow-y-auto">
+            {threats.slice(0, 6).map((threat) => (
               <motion.div
                 key={threat.id}
                 initial={{ x: -100, opacity: 0 }}
@@ -101,19 +101,19 @@ const MapPanel = ({ gameState, events, threats }) => {
                 onClick={() => setSelectedThreat(threat)}
                 title="Click to view details and deflect"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0 mr-2">
-                    <p className="text-xs font-bold text-white truncate">{threat.title}</p>
-                    <p className="text-xs text-gray-400 truncate">{threat.description}</p>
+                <div className="flex flex-col">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-bold text-white truncate flex-1">{threat.title}</p>
+                    <span className={`text-xs font-mono px-1 py-0.5 rounded flex-shrink-0 ml-1 ${
+                      threat.severity === 'critical' ? 'bg-neon-red text-black' :
+                      threat.severity === 'moderate' ? 'bg-orange-500 text-black' :
+                      threat.severity === 'low' ? 'bg-neon-yellow text-black' :
+                      'bg-neon-green text-black'
+                    }`}>
+                      {threat.severity[0].toUpperCase()}
+                    </span>
                   </div>
-                  <span className={`text-xs font-mono px-1.5 py-0.5 rounded flex-shrink-0 ${
-                    threat.severity === 'critical' ? 'bg-neon-red text-black' :
-                    threat.severity === 'moderate' ? 'bg-orange-500 text-black' :
-                    threat.severity === 'low' ? 'bg-neon-yellow text-black' :
-                    'bg-neon-green text-black'
-                  }`}>
-                    {threat.severity.toUpperCase()}
-                  </span>
+                  <p className="text-xs text-gray-400 truncate">{threat.description}</p>
                 </div>
               </motion.div>
             ))}

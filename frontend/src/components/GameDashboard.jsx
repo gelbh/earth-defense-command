@@ -65,7 +65,7 @@ const GameDashboard = () => {
       {/* Main Game Area */}
       <div className="flex-1 grid grid-cols-12 gap-3 p-3 overflow-hidden">
         {/* Map Panel - Left Side */}
-        <div className="col-span-8 h-full overflow-hidden">
+        <div className="col-span-7 h-full overflow-hidden">
           <MapPanel 
             gameState={gameState} 
             events={events}
@@ -74,7 +74,7 @@ const GameDashboard = () => {
         </div>
         
         {/* Command Panel - Right Side */}
-        <div className="col-span-4 h-full overflow-hidden">
+        <div className="col-span-5 h-full overflow-hidden">
           <CommandPanel>
             <EventFeed events={events} />
             <ActionButtons 

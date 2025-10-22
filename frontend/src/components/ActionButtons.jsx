@@ -62,8 +62,9 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
 
   return (
     <div className="space-y-1.5 flex-shrink-0">
-      {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-1.5">
+      {/* All Buttons in Grid */}
+      <div className="grid grid-cols-3 gap-1.5">
+        {/* Game Actions */}
         <motion.button
           variants={buttonVariants}
           whileHover="hover"
@@ -96,6 +97,20 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
           <div className="text-xs leading-tight">Probe ({gameState.probes})</div>
         </motion.button>
 
+        {/* Vertical Separator + Advance Day */}
+        <motion.button
+          variants={buttonVariants}
+          whileHover="hover"
+          whileTap="tap"
+          onClick={handleAdvanceDay}
+          disabled={loading}
+          className="p-1.5 rounded font-mono text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white transition-all disabled:opacity-50 border-l-2 border-orange-400"
+        >
+          <div className="text-sm">⏭️</div>
+          <div className="text-xs leading-tight">Advance Day</div>
+        </motion.button>
+
+        {/* Second Row */}
         <motion.button
           variants={buttonVariants}
           whileHover="hover"
@@ -122,30 +137,18 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
           <div className="text-sm">⚡</div>
           <div className="text-xs leading-tight">Upgrades</div>
         </motion.button>
-      </div>
 
-      {/* Control Buttons */}
-      <div className="space-y-1">
-        <motion.button
-          variants={buttonVariants}
-          whileHover="hover"
-          whileTap="tap"
-          onClick={handleAdvanceDay}
-          disabled={loading}
-          className="w-full p-1.5 rounded font-mono text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white transition-all disabled:opacity-50"
-        >
-          ⏭️ Advance Day
-        </motion.button>
-
+        {/* Vertical Separator + Reset */}
         <motion.button
           variants={buttonVariants}
           whileHover="hover"
           whileTap="tap"
           onClick={handleResetGame}
           disabled={loading}
-          className="w-full p-1 rounded font-mono text-xs font-bold bg-neon-red hover:bg-red-500 text-white transition-all disabled:opacity-50"
+          className="p-1.5 rounded font-mono text-xs font-bold bg-neon-red hover:bg-red-500 text-white transition-all disabled:opacity-50 border-l-2 border-red-400"
         >
-          🔄 Reset
+          <div className="text-sm">🔄</div>
+          <div className="text-xs leading-tight">Reset</div>
         </motion.button>
       </div>
 
