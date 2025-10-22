@@ -78,10 +78,62 @@ class GameService {
 
       return events;
     } catch (error) {
-      console.error('Error generating events:', error);
-      // Return fallback events if NASA API fails
-      return [this.generateRandomEvent()];
+      console.error('Error generating events:', error.message);
+      
+      // Generate simulated asteroid events when NASA API fails
+      const simulatedEvents = this.generateSimulatedAsteroidEvents();
+      this.gameState.events = [...simulatedEvents, ...this.gameState.events].slice(0, 50);
+      this.gameState.threats = simulatedEvents.filter(e => e.type === 'asteroid_detected');
+      
+      return simulatedEvents;
     }
+  }
+
+  // Generate simulated asteroid events (fallback when NASA API fails)
+  generateSimulatedAsteroidEvents() {
+    const events = [];
+    const numAsteroids = Math.floor(Math.random() * 3) + 1; // 1-3 asteroids
+    
+    for (let i = 0; i < numAsteroids; i++) {
+      const diameter = Math.floor(Math.random() * 500) + 50; // 50-550m
+      const velocity = Math.floor(Math.random() * 20) + 5; // 5-25 km/s
+      const missDistance = Math.floor(Math.random() * 5000000) + 500000; // 500k-5.5M km
+      const isHazardous = Math.random() < 0.3;
+      
+      const asteroidId = `SIM-${Date.now()}-${i}`;
+      const asteroidName = `(${2000 + Math.floor(Math.random() * 25)}) ${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 999)}`;
+      
+      const asteroid = {
+        id: asteroidId,
+        name: asteroidName,
+        diameter,
+        velocity,
+        missDistance,
+        isHazardous
+      };
+      
+      const riskLevel = nasaService.calculateRiskLevel(asteroid);
+      
+      if (riskLevel !== 'safe') {
+        events.push({
+          id: `asteroid_${asteroidId}`,
+          type: 'asteroid_detected',
+          severity: riskLevel,
+          title: `Asteroid ${asteroidName} Detected`,
+          description: `Simulated asteroid approaching Earth. Diameter: ${Math.round(diameter)}m, Velocity: ${Math.round(velocity)} km/s, Miss Distance: ${Math.round(missDistance / 1000)}k km`,
+          data: asteroid,
+          timestamp: new Date().toISOString(),
+          requiresAction: true
+        });
+      }
+    }
+    
+    // Add a random event too
+    if (Math.random() < 0.5) {
+      events.push(this.generateRandomEvent());
+    }
+    
+    return events;
   }
 
   // Generate random events for game variety
