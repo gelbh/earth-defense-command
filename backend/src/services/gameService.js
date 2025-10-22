@@ -78,9 +78,7 @@ class GameService {
 
       return events;
     } catch (error) {
-      console.error('Error generating events:', error.message);
-      
-      // Generate simulated asteroid events when NASA API fails
+      // Silently use simulated data when NASA API is unavailable
       const simulatedEvents = this.generateSimulatedAsteroidEvents();
       this.gameState.events = [...simulatedEvents, ...this.gameState.events].slice(0, 50);
       this.gameState.threats = simulatedEvents.filter(e => e.type === 'asteroid_detected');

@@ -95,7 +95,13 @@ class NasaService {
 
       return asteroids;
     } catch (error) {
-      console.error("Error fetching near Earth objects:", error.message);
+      // Silently handle rate limits - game will use simulated data
+      if (error.response?.status === 429) {
+        console.log("NASA API rate limit reached - using simulated data");
+      } else {
+        console.error("Error fetching near Earth objects:", error.message);
+      }
+      // Throw error so game service knows to use simulated data
       throw new Error("Failed to fetch NEO data");
     }
   }
