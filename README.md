@@ -100,7 +100,6 @@ earth-defense-command/
 
 **NASA:**
 - `GET /api/neo/asteroids` - Real asteroid data
-- `GET /api/epic/latest` - Earth images
 
 ## 🤝 Contributing
 
@@ -118,7 +117,7 @@ ISC License - see package.json for details
 
 ## 🙏 Credits
 
-- **NASA** - NEO and EPIC APIs
+- **NASA** - NEO API for real asteroid data
 - **Three.js** & **React Three Fiber** - 3D graphics
 - **Tailwind CSS** - Styling
 
