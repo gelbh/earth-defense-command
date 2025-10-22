@@ -4,12 +4,12 @@ import { OrbitControls, Sphere, Stars, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Earth component with proper spherical texture
-function Earth() {
+function Earth({ isPaused = false }) {
   const earthRef = useRef();
   
   // Rotate Earth continuously
   useFrame(() => {
-    if (earthRef.current) {
+    if (earthRef.current && !isPaused) {
       earthRef.current.rotation.y += 0.002; // Slow rotation
     }
   });
@@ -196,7 +196,7 @@ function BurnupEffect({ position, intensity = 1 }) {
 }
 
 // Asteroid marker component - APPROACHING Earth (not orbiting)
-function AsteroidMarker({ threat, index, onDeflect }) {
+function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
   const markerRef = useRef();
   const [hovered, setHovered] = useState(false);
   
@@ -217,9 +217,11 @@ function AsteroidMarker({ threat, index, onDeflect }) {
   
   useFrame(({ clock }) => {
     if (markerRef.current) {
-      const currentTime = hovered ? pausedTime.current : clock.getElapsedTime();
+      // Pause if game is paused OR asteroid is hovered
+      const shouldPause = isPaused || hovered;
+      const currentTime = shouldPause ? pausedTime.current : clock.getElapsedTime();
       
-      if (!hovered) {
+      if (!shouldPause) {
         pausedTime.current = currentTime;
       }
       
@@ -442,7 +444,7 @@ function OrbitRing({ radius, color = '#4477ff', opacity = 0.1 }) {
 }
 
 // Satellite component with detection radius
-function Satellite({ satellite, index, onUpgrade }) {
+function Satellite({ satellite, index, onUpgrade, isPaused = false }) {
   const satelliteRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
@@ -464,7 +466,7 @@ function Satellite({ satellite, index, onUpgrade }) {
   };
   
   useFrame(({ clock }) => {
-    if (satelliteRef.current) {
+    if (satelliteRef.current && !isPaused) {
       const t = clock.getElapsedTime() * speed + orbitPosition;
       satelliteRef.current.position.x = Math.cos(t) * radius;
       satelliteRef.current.position.z = Math.sin(t) * radius;
@@ -476,28 +478,32 @@ function Satellite({ satellite, index, onUpgrade }) {
 
   return (
     <group ref={satelliteRef}>
-      {/* 3D Detection Sphere - Wireframe */}
-      <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[detectionRadius, 32, 32]} />
-        <meshBasicMaterial 
-          color="#00d4ff" 
-          wireframe
-          transparent 
-          opacity={hovered ? 0.4 : 0.2} 
-        />
-      </mesh>
-      
-      {/* Inner detection sphere - subtle fill */}
-      <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[detectionRadius, 32, 32]} />
-        <meshBasicMaterial 
-          color="#00d4ff" 
-          transparent 
-          opacity={hovered ? 0.08 : 0.03} 
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
+      {/* 3D Detection Sphere - Only show wireframe when hovered */}
+      {hovered && (
+        <>
+          <mesh position={[0, 0, 0]}>
+            <sphereGeometry args={[detectionRadius, 32, 32]} />
+            <meshBasicMaterial 
+              color="#00d4ff" 
+              wireframe
+              transparent 
+              opacity={0.4} 
+            />
+          </mesh>
+          
+          {/* Inner detection sphere - subtle fill */}
+          <mesh position={[0, 0, 0]}>
+            <sphereGeometry args={[detectionRadius, 32, 32]} />
+            <meshBasicMaterial 
+              color="#00d4ff" 
+              transparent 
+              opacity={0.08} 
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        </>
+      )}
       
       {/* Tooltip */}
       {hovered && (
@@ -633,7 +639,7 @@ function LaserBeam({ startPosition, endPosition, level = 1, intensity = 1 }) {
 }
 
 // Probe component with laser capabilities
-function Probe({ probe, index, onUpgrade }) {
+function Probe({ probe, index, onUpgrade, isPaused = false }) {
   const probeRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
@@ -655,7 +661,7 @@ function Probe({ probe, index, onUpgrade }) {
   };
   
   useFrame(({ clock }) => {
-    if (probeRef.current) {
+    if (probeRef.current && !isPaused) {
       const t = clock.getElapsedTime() * speed + orbitPosition;
       probeRef.current.position.x = Math.cos(t) * radius;
       probeRef.current.position.z = Math.sin(t) * radius;
@@ -762,7 +768,7 @@ function ResearchStation({ index }) {
 }
 
 // Main 3D Scene
-function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers = [] }) {
+function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers = [], isPaused = false }) {
   return (
     <>
       {/* Ambient light for overall illumination */}
@@ -787,7 +793,7 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers 
       
       {/* Earth with NASA Blue Marble texture */}
       <Suspense fallback={<FallbackEarth />}>
-        <Earth />
+        <Earth isPaused={isPaused} />
       </Suspense>
       
       {/* Orbit rings */}
@@ -798,12 +804,12 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers 
       
       {/* Deployed Satellites with detection radii */}
       {gameState && Array.isArray(gameState.satellites) && gameState.satellites.map((satellite, index) => (
-        <Satellite key={satellite.id || `sat-${index}`} satellite={satellite} index={index} onUpgrade={onUpgrade} />
+        <Satellite key={satellite.id || `sat-${index}`} satellite={satellite} index={index} onUpgrade={onUpgrade} isPaused={isPaused} />
       ))}
       
       {/* Deployed Probes */}
       {gameState && Array.isArray(gameState.probes) && gameState.probes.map((probe, index) => (
-        <Probe key={probe.id || `probe-${index}`} probe={probe} index={index} onUpgrade={onUpgrade} />
+        <Probe key={probe.id || `probe-${index}`} probe={probe} index={index} onUpgrade={onUpgrade} isPaused={isPaused} />
       ))}
       
       {/* Research Stations */}
@@ -845,6 +851,7 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers 
           threat={threat} 
           index={index}
           onDeflect={onDeflectAsteroid}
+          isPaused={isPaused}
         />
       ))}
       
@@ -875,6 +882,7 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers 
 // Main Earth3D component
 const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onUpgrade = null }) => {
   const [activeLasers, setActiveLasers] = useState([]);
+  const [isPaused, setIsPaused] = useState(false);
   
   // Wrapper for deflect that shows laser beam
   const handleDeflectWithLaser = async (threat) => {
@@ -973,7 +981,11 @@ const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onU
   };
   
   return (
-    <div className="w-full h-full bg-black rounded-lg overflow-hidden relative">
+    <div 
+      className="w-full h-full bg-black rounded-lg overflow-hidden relative"
+      onPointerEnter={() => setIsPaused(true)}
+      onPointerLeave={() => setIsPaused(false)}
+    >
       <Canvas
         camera={{ position: [0, 3, 8], fov: 50 }}
         gl={{ antialias: true, alpha: false }}
@@ -984,6 +996,7 @@ const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onU
           onDeflectAsteroid={handleDeflectWithLaser} 
           onUpgrade={onUpgrade}
           activeLasers={activeLasers}
+          isPaused={isPaused}
         />
       </Canvas>
     </div>
