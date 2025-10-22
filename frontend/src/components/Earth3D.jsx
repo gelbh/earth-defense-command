@@ -135,8 +135,125 @@ function OrbitRing({ radius, color = '#4477ff', opacity = 0.1 }) {
   );
 }
 
+// Satellite component
+function Satellite({ index, total }) {
+  const satelliteRef = useRef();
+  const radius = 2.5; // Close orbit for satellites
+  const speed = 0.8;
+  const offset = (index * Math.PI * 2) / total;
+  
+  useFrame(({ clock }) => {
+    if (satelliteRef.current) {
+      const t = clock.getElapsedTime() * speed + offset;
+      satelliteRef.current.position.x = Math.cos(t) * radius;
+      satelliteRef.current.position.z = Math.sin(t) * radius;
+      satelliteRef.current.position.y = Math.sin(t * 2) * 0.2;
+      // Rotate satellite
+      satelliteRef.current.rotation.y = t;
+    }
+  });
+
+  return (
+    <group ref={satelliteRef}>
+      {/* Main satellite body */}
+      <mesh>
+        <boxGeometry args={[0.08, 0.08, 0.12]} />
+        <meshStandardMaterial color="#00d4ff" metalness={0.8} roughness={0.2} />
+      </mesh>
+      {/* Solar panels */}
+      <mesh position={[0.1, 0, 0]}>
+        <boxGeometry args={[0.15, 0.05, 0.08]} />
+        <meshStandardMaterial color="#4477ff" metalness={0.6} />
+      </mesh>
+      <mesh position={[-0.1, 0, 0]}>
+        <boxGeometry args={[0.15, 0.05, 0.08]} />
+        <meshStandardMaterial color="#4477ff" metalness={0.6} />
+      </mesh>
+      {/* Antenna */}
+      <mesh position={[0, 0.08, 0]}>
+        <cylinderGeometry args={[0.01, 0.01, 0.1]} />
+        <meshStandardMaterial color="#00ff88" emissive="#00ff88" emissiveIntensity={0.5} />
+      </mesh>
+      {/* Glow effect */}
+      <pointLight position={[0, 0, 0]} intensity={0.3} color="#00d4ff" distance={0.5} />
+    </group>
+  );
+}
+
+// Probe component
+function Probe({ index, total }) {
+  const probeRef = useRef();
+  const radius = 2.8;
+  const speed = 0.6;
+  const offset = (index * Math.PI * 2) / total + Math.PI; // Offset from satellites
+  
+  useFrame(({ clock }) => {
+    if (probeRef.current) {
+      const t = clock.getElapsedTime() * speed + offset;
+      probeRef.current.position.x = Math.cos(t) * radius;
+      probeRef.current.position.z = Math.sin(t) * radius;
+      probeRef.current.position.y = Math.cos(t * 1.5) * 0.3;
+      // Point probe in direction of travel
+      probeRef.current.rotation.y = t + Math.PI / 2;
+    }
+  });
+
+  return (
+    <group ref={probeRef}>
+      {/* Probe body - cone shape */}
+      <mesh rotation={[0, 0, Math.PI / 2]}>
+        <coneGeometry args={[0.06, 0.15, 8]} />
+        <meshStandardMaterial color="#00ff88" metalness={0.7} roughness={0.3} />
+      </mesh>
+      {/* Engine glow */}
+      <mesh position={[-0.08, 0, 0]}>
+        <sphereGeometry args={[0.03, 8, 8]} />
+        <meshBasicMaterial color="#ffaa00" />
+      </mesh>
+      <pointLight position={[-0.08, 0, 0]} intensity={0.4} color="#ffaa00" distance={0.4} />
+    </group>
+  );
+}
+
+// Research Station (shown when research teams are active)
+function ResearchStation({ index }) {
+  const stationRef = useRef();
+  const radius = 2.3;
+  const angle = (index * Math.PI * 2) / 3; // Fixed position
+  
+  useFrame(() => {
+    if (stationRef.current) {
+      stationRef.current.rotation.y += 0.005;
+    }
+  });
+
+  return (
+    <group
+      ref={stationRef}
+      position={[
+        Math.cos(angle) * radius,
+        0,
+        Math.sin(angle) * radius
+      ]}
+    >
+      {/* Station core */}
+      <mesh>
+        <sphereGeometry args={[0.1, 16, 16]} />
+        <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.2} />
+      </mesh>
+      {/* Ring modules */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.15, 0.02, 8, 16]} />
+        <meshStandardMaterial color="#ffaa00" metalness={0.6} />
+      </mesh>
+      {/* Glow */}
+      <pointLight position={[0, 0, 0]} intensity={0.3} color="#ffd700" distance={0.6} />
+    </group>
+  );
+}
+
 // Main 3D Scene
-function Scene({ threats }) {
+function Scene({ threats, gameState }) {
   return (
     <>
       {/* Ambient light for overall illumination */}
@@ -163,9 +280,52 @@ function Scene({ threats }) {
       <Earth />
       
       {/* Orbit rings */}
-      <OrbitRing radius={3} opacity={0.15} />
-      <OrbitRing radius={3.5} opacity={0.1} />
-      <OrbitRing radius={4} opacity={0.08} />
+      <OrbitRing radius={2.5} color="#00d4ff" opacity={0.12} /> {/* Satellite orbit */}
+      <OrbitRing radius={2.8} color="#00ff88" opacity={0.10} /> {/* Probe orbit */}
+      <OrbitRing radius={3.5} opacity={0.08} />
+      <OrbitRing radius={4} opacity={0.06} />
+      
+      {/* Deployed Satellites */}
+      {gameState && Array.from({ length: gameState.satellites }).map((_, index) => (
+        <Satellite key={`sat-${index}`} index={index} total={gameState.satellites} />
+      ))}
+      
+      {/* Deployed Probes */}
+      {gameState && Array.from({ length: gameState.probes }).map((_, index) => (
+        <Probe key={`probe-${index}`} index={index} total={gameState.probes} />
+      ))}
+      
+      {/* Research Stations */}
+      {gameState && Array.from({ length: gameState.researchTeams }).map((_, index) => (
+        <ResearchStation key={`research-${index}`} index={index} />
+      ))}
+      
+      {/* Upgrade Effects - AI Tracking Network */}
+      {gameState?.upgrades?.aiTracking && (
+        <mesh>
+          <sphereGeometry args={[2.2, 32, 32]} />
+          <meshBasicMaterial
+            color="#00d4ff"
+            wireframe
+            transparent
+            opacity={0.1}
+          />
+        </mesh>
+      )}
+      
+      {/* Upgrade Effects - Improved Radar */}
+      {gameState?.upgrades?.improvedRadar && (
+        <>
+          <mesh>
+            <torusGeometry args={[2.4, 0.02, 16, 100]} />
+            <meshBasicMaterial color="#00ff88" transparent opacity={0.3} />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[2.4, 0.02, 16, 100]} />
+            <meshBasicMaterial color="#00ff88" transparent opacity={0.3} />
+          </mesh>
+        </>
+      )}
       
       {/* Asteroid threat markers */}
       {threats.slice(0, 5).map((threat, index) => (
@@ -186,14 +346,14 @@ function Scene({ threats }) {
 }
 
 // Main Earth3D component
-const Earth3D = ({ threats = [] }) => {
+const Earth3D = ({ threats = [], gameState = null }) => {
   return (
     <div className="w-full h-full bg-black rounded-lg overflow-hidden">
       <Canvas
         camera={{ position: [0, 3, 8], fov: 50 }}
         gl={{ antialias: true, alpha: false }}
       >
-        <Scene threats={threats} />
+        <Scene threats={threats} gameState={gameState} />
       </Canvas>
     </div>
   );

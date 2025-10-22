@@ -61,7 +61,7 @@ const MapPanel = ({ gameState, events, threats }) => {
 
       {/* 3D Earth Visualization */}
       <div className="flex-1 relative rounded-lg overflow-hidden mb-2 min-h-[200px]">
-        <Earth3D threats={threats} />
+        <Earth3D threats={threats} gameState={gameState} />
 
         {/* Earth Status Overlay */}
         <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-sm rounded-lg p-2 border border-neon-blue/30">
