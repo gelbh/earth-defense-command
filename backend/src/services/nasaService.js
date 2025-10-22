@@ -117,6 +117,105 @@ class NasaService {
       throw new Error("Failed to fetch search count");
     }
   }
+
+  async getDiscoveryTimeline() {
+    try {
+      const allExoplanets = await this.getAllExoplanetsFromAPI();
+
+      // Group by discovery year
+      const yearCounts = {};
+      allExoplanets.forEach((planet) => {
+        if (planet.disc_year) {
+          const year = planet.disc_year;
+          yearCounts[year] = (yearCounts[year] || 0) + 1;
+        }
+      });
+
+      // Convert to array and sort by year
+      const timeline = Object.entries(yearCounts)
+        .map(([year, count]) => ({
+          year: parseInt(year),
+          count: count,
+        }))
+        .sort((a, b) => a.year - b.year);
+
+      return timeline;
+    } catch (error) {
+      console.error("Error fetching discovery timeline:", error.message);
+      throw new Error("Failed to fetch discovery timeline");
+    }
+  }
+
+  async getDiscoveryMethods() {
+    try {
+      const allExoplanets = await this.getAllExoplanetsFromAPI();
+
+      // Group by discovery method
+      const methodCounts = {};
+      allExoplanets.forEach((planet) => {
+        if (planet.discoverymethod) {
+          const method = planet.discoverymethod;
+          methodCounts[method] = (methodCounts[method] || 0) + 1;
+        }
+      });
+
+      // Convert to array and sort by count
+      const methods = Object.entries(methodCounts)
+        .map(([method, count]) => ({
+          method: method,
+          count: count,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      return methods;
+    } catch (error) {
+      console.error("Error fetching discovery methods:", error.message);
+      throw new Error("Failed to fetch discovery methods");
+    }
+  }
+
+  async getSizeDistribution() {
+    try {
+      const allExoplanets = await this.getAllExoplanetsFromAPI();
+
+      // Categorize by size (based on radius in Earth radii)
+      const sizeCategories = {
+        "Small (< 1.5 R⊕)": 0,
+        "Medium (1.5-2.5 R⊕)": 0,
+        "Large (2.5-6 R⊕)": 0,
+        "Giant (> 6 R⊕)": 0,
+        Unknown: 0,
+      };
+
+      allExoplanets.forEach((planet) => {
+        const radius = planet.pl_rade;
+        if (!radius) {
+          sizeCategories["Unknown"]++;
+        } else if (radius < 1.5) {
+          sizeCategories["Small (< 1.5 R⊕)"]++;
+        } else if (radius < 2.5) {
+          sizeCategories["Medium (1.5-2.5 R⊕)"]++;
+        } else if (radius < 6) {
+          sizeCategories["Large (2.5-6 R⊕)"]++;
+        } else {
+          sizeCategories["Giant (> 6 R⊕)"]++;
+        }
+      });
+
+      // Convert to array
+      const distribution = Object.entries(sizeCategories).map(
+        ([category, count]) => ({
+          category: category,
+          count: count,
+        })
+      );
+
+      return distribution;
+    } catch (error) {
+      console.error("Error fetching size distribution:", error.message);
+      throw new Error("Failed to fetch size distribution");
+    }
+  }
 }
 
 export default new NasaService();
