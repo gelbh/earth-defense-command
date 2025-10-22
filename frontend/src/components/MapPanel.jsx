@@ -3,10 +3,11 @@ import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext';
 
 const MapPanel = ({ gameState, events, threats }) => {
-  const { getLatestEarthImage } = useGame();
+  const { getLatestEarthImage, processAction } = useGame();
   const [earthImage, setEarthImage] = useState(null);
   const [selectedThreat, setSelectedThreat] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [deflecting, setDeflecting] = useState(false);
 
   useEffect(() => {
     // Only load image once
@@ -35,6 +36,28 @@ const MapPanel = ({ gameState, events, threats }) => {
       case 'moderate': return 'glow-yellow';
       case 'low': return 'glow-yellow';
       default: return 'glow-green';
+    }
+  };
+
+  const handleDeflect = async (threat) => {
+    setDeflecting(true);
+    try {
+      const result = await processAction({
+        type: 'deflect_asteroid',
+        targetId: threat.id,
+        resource: 'probe'
+      });
+      
+      if (result && result.message) {
+        alert(result.message); // Temporary - could be replaced with a toast
+      }
+      
+      setSelectedThreat(null);
+    } catch (error) {
+      console.error('Failed to deflect asteroid:', error);
+      alert('Failed to deflect asteroid');
+    } finally {
+      setDeflecting(false);
     }
   };
 
@@ -106,13 +129,14 @@ const MapPanel = ({ gameState, events, threats }) => {
                 key={threat.id}
                 initial={{ x: -100, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                className={`p-1.5 rounded border-l-2 cursor-pointer hover:bg-opacity-30 ${
-                  threat.severity === 'critical' ? 'border-neon-red bg-red-900/20' :
-                  threat.severity === 'moderate' ? 'border-orange-500 bg-orange-900/20' :
-                  threat.severity === 'low' ? 'border-neon-yellow bg-yellow-900/20' :
-                  'border-neon-green bg-green-900/20'
+                className={`p-1.5 rounded border-l-2 cursor-pointer hover:bg-opacity-40 transition-all ${
+                  threat.severity === 'critical' ? 'border-neon-red bg-red-900/20 hover:bg-red-900/30' :
+                  threat.severity === 'moderate' ? 'border-orange-500 bg-orange-900/20 hover:bg-orange-900/30' :
+                  threat.severity === 'low' ? 'border-neon-yellow bg-yellow-900/20 hover:bg-yellow-900/30' :
+                  'border-neon-green bg-green-900/20 hover:bg-green-900/30'
                 }`}
                 onClick={() => setSelectedThreat(threat)}
+                title="Click to view details and deflect"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0 mr-2">
@@ -176,12 +200,25 @@ const MapPanel = ({ gameState, events, threats }) => {
               </div>
             )}
             
-            <button
-              onClick={() => setSelectedThreat(null)}
-              className="mt-4 w-full bg-neon-blue hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition-colors"
-            >
-              Close
-            </button>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => handleDeflect(selectedThreat)}
+                disabled={deflecting || gameState.probes <= 0 || gameState.funds < 200000}
+                className={`flex-1 font-bold py-2 px-4 rounded transition-colors ${
+                  deflecting || gameState.probes <= 0 || gameState.funds < 200000
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-neon-green hover:bg-green-500 text-black'
+                }`}
+              >
+                {deflecting ? 'Deflecting...' : `🚀 Deflect ($200K, 1 Probe)`}
+              </button>
+              <button
+                onClick={() => setSelectedThreat(null)}
+                className="flex-1 bg-neon-blue hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </motion.div>
         </motion.div>
       )}
