@@ -337,16 +337,43 @@ class GameService {
   advanceDay() {
     this.gameState.day++;
     
+    // Process unhandled threats - they cause damage!
+    const criticalThreats = this.gameState.threats.filter(t => t.severity === 'critical');
+    const moderateThreats = this.gameState.threats.filter(t => t.severity === 'moderate');
+    
+    if (criticalThreats.length > 0) {
+      const damage = criticalThreats.length * 15; // 15% damage per critical threat
+      this.gameState.earthDamage += damage;
+      this.gameState.reputation -= criticalThreats.length * 10;
+      this.gameState.score -= criticalThreats.length * 200;
+    }
+    
+    if (moderateThreats.length > 0) {
+      const damage = moderateThreats.length * 8; // 8% damage per moderate threat
+      this.gameState.earthDamage += damage;
+      this.gameState.reputation -= moderateThreats.length * 5;
+      this.gameState.score -= moderateThreats.length * 100;
+    }
+    
+    // Clear old threats after processing
+    this.gameState.threats = [];
+    
     // Restore some resources daily
     this.gameState.power = Math.min(100, this.gameState.power + 20);
     this.gameState.satellites = Math.min(5, this.gameState.satellites + 1);
     this.gameState.probes = Math.min(3, this.gameState.probes + 1);
     
-    // Generate daily funds
-    this.gameState.funds += 50000;
+    // Generate daily funds (reduced if reputation is low)
+    const fundBonus = Math.max(0, this.gameState.reputation) * 500;
+    this.gameState.funds += 50000 + fundBonus;
     
-    // Reduce earth damage slightly (healing)
-    this.gameState.earthDamage = Math.max(0, this.gameState.earthDamage - 2);
+    // Reduce earth damage slightly (healing) - only if no unhandled threats
+    if (criticalThreats.length === 0 && moderateThreats.length === 0) {
+      this.gameState.earthDamage = Math.max(0, this.gameState.earthDamage - 2);
+    }
+    
+    // Cap earth damage at 100%
+    this.gameState.earthDamage = Math.min(100, this.gameState.earthDamage);
     
     return this.gameState;
   }
