@@ -354,8 +354,12 @@ class GameService {
         this.gameState.availableProbes--; // Use an available probe
         // Note: probe stays in orbit, just used for this mission
         
-        // Calculate success based on asteroid size and player upgrades
-        const successChance = this.calculateDeflectionSuccess(threat.data);
+        // Calculate success based on asteroid size, player upgrades, and probe levels
+        const avgProbeLevel = this.gameState.probes.length > 0 
+          ? this.gameState.probes.reduce((sum, p) => sum + p.level, 0) / this.gameState.probes.length 
+          : 1;
+        let successChance = this.calculateDeflectionSuccess(threat.data);
+        successChance = Math.min(0.95, successChance + (avgProbeLevel - 1) * 0.1); // +10% per avg probe level
         const success = Math.random() < successChance;
         
         if (success) {
@@ -373,6 +377,54 @@ class GameService {
           this.gameState.earthDamage += 5;
           this.gameState.reputation -= 5;
         }
+        break;
+
+      case 'upgrade_satellite':
+        const satellite = this.gameState.satellites.find(s => s.id === targetId);
+        if (!satellite) {
+          result.message = 'Satellite not found';
+          break;
+        }
+        if (satellite.level >= 3) {
+          result.message = 'Satellite already at max level (3)';
+          break;
+        }
+        const satCost = satellite.level * 100000; // L1→L2 = $100K, L2→L3 = $200K
+        if (this.gameState.funds < satCost) {
+          result.message = `Insufficient funds ($${satCost/1000}K required)`;
+          break;
+        }
+        
+        satellite.level++;
+        satellite.detectionRadius += 1.0; // +1 unit per level (3.5 → 4.5 → 5.5)
+        this.gameState.funds -= satCost;
+        result.success = true;
+        result.message = `Satellite upgraded to Level ${satellite.level}! Detection radius increased to ${satellite.detectionRadius.toFixed(1)} units.`;
+        result.scoreChange = 100;
+        break;
+
+      case 'upgrade_probe':
+        const probe = this.gameState.probes.find(p => p.id === targetId);
+        if (!probe) {
+          result.message = 'Probe not found';
+          break;
+        }
+        if (probe.level >= 3) {
+          result.message = 'Probe already at max level (3)';
+          break;
+        }
+        const probeCost = probe.level * 150000; // L1→L2 = $150K, L2→L3 = $300K
+        if (this.gameState.funds < probeCost) {
+          result.message = `Insufficient funds ($${probeCost/1000}K required)`;
+          break;
+        }
+        
+        probe.level++;
+        probe.laserPower += 50; // +50% power per level (100 → 150 → 200)
+        this.gameState.funds -= probeCost;
+        result.success = true;
+        result.message = `Probe upgraded to Level ${probe.level}! Laser power increased to ${probe.laserPower}%.`;
+        result.scoreChange = 150;
         break;
 
       default:

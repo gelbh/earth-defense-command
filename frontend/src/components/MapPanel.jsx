@@ -28,6 +28,43 @@ const MapPanel = ({ gameState, events, threats }) => {
     }
   };
 
+  const handleUpgrade = async (assetId, assetType) => {
+    try {
+      const actionType = assetType === 'satellite' ? 'upgrade_satellite' : 'upgrade_probe';
+      const result = await processAction({
+        type: actionType,
+        targetId: assetId
+      });
+      
+      if (result && result.success) {
+        setToast({
+          type: 'success',
+          message: {
+            title: '✅ Upgrade Complete!',
+            description: result.message
+          }
+        });
+      } else {
+        setToast({
+          type: 'error',
+          message: {
+            title: '❌ Upgrade Failed',
+            description: result.message || 'Unable to upgrade'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error upgrading:', error);
+      setToast({
+        type: 'error',
+        message: {
+          title: '❌ Upgrade Error',
+          description: 'Failed to process upgrade request'
+        }
+      });
+    }
+  };
+
   const handleDeflect = async (threat) => {
     setDeflecting(true);
     try {
@@ -88,6 +125,7 @@ const MapPanel = ({ gameState, events, threats }) => {
           threats={threats} 
           gameState={gameState}
           onDeflectAsteroid={handleDeflect}
+          onUpgrade={handleUpgrade}
         />
 
         {/* Earth Status Overlay */}

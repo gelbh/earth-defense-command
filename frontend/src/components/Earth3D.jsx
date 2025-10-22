@@ -362,9 +362,10 @@ function OrbitRing({ radius, color = '#4477ff', opacity = 0.1 }) {
 }
 
 // Satellite component with detection radius
-function Satellite({ satellite, index }) {
+function Satellite({ satellite, index, onUpgrade }) {
   const satelliteRef = useRef();
   const [hovered, setHovered] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
   const radius = 2.5; // Close orbit for satellites
   const speed = 0.8;
   
@@ -372,6 +373,15 @@ function Satellite({ satellite, index }) {
   const orbitPosition = satellite?.orbitPosition || (index * Math.PI * 2) / 3;
   const detectionRadius = satellite?.detectionRadius || 3.5;
   const level = satellite?.level || 1;
+  
+  const handleClick = async (e) => {
+    e.stopPropagation();
+    if (upgrading || !onUpgrade || level >= 3) return;
+    
+    setUpgrading(true);
+    await onUpgrade(satellite.id, 'satellite');
+    setUpgrading(false);
+  };
   
   useFrame(({ clock }) => {
     if (satelliteRef.current) {
@@ -412,27 +422,46 @@ function Satellite({ satellite, index }) {
       {hovered && (
         <Html distanceFactor={10}>
           <div className="bg-black/95 text-white px-3 py-2 rounded-lg border-2 border-neon-blue text-xs font-mono whitespace-nowrap pointer-events-none shadow-2xl">
-            <div className="font-bold text-neon-blue text-sm mb-1">🛰️ Satellite Level {level}</div>
+            <div className="font-bold text-neon-blue text-sm mb-1">🛰️ Satellite Level {level}/3</div>
             <div className="text-gray-300">Detection Radius: {detectionRadius.toFixed(1)} units</div>
-            <div className="text-gray-400">Status: Operational</div>
-            <div className="text-neon-green mt-2 border-t border-gray-600 pt-1 text-center">
-              🖱️ Click to upgrade
-            </div>
+            <div className="text-gray-400">Status: {upgrading ? 'Upgrading...' : 'Operational'}</div>
+            {level < 3 && (
+              <div className="mt-2 border-t border-gray-600 pt-1">
+                <div className="text-neon-green text-center font-bold">🖱️ Click to upgrade</div>
+                <div className="text-yellow-400 text-center">
+                  Cost: ${level * 100}K → Radius: {(detectionRadius + 1).toFixed(1)}
+                </div>
+              </div>
+            )}
+            {level >= 3 && (
+              <div className="text-green-400 mt-2 border-t border-gray-600 pt-1 text-center">
+                ⭐ MAX LEVEL
+              </div>
+            )}
           </div>
         </Html>
       )}
       {/* Main satellite body */}
       <mesh
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = level < 3 ? 'pointer' : 'default';
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          setHovered(false);
+          document.body.style.cursor = 'default';
+        }}
+        onClick={handleClick}
       >
         <boxGeometry args={[0.08, 0.08, 0.12]} />
         <meshStandardMaterial 
-          color="#00d4ff" 
+          color={level >= 3 ? "#00ff00" : "#00d4ff"} 
           metalness={0.8} 
           roughness={0.2}
-          emissive="#00d4ff"
-          emissiveIntensity={hovered ? 0.5 : 0}
+          emissive={level >= 3 ? "#00ff00" : "#00d4ff"}
+          emissiveIntensity={hovered ? 0.8 : (level >= 3 ? 0.3 : 0)}
         />
       </mesh>
       {/* Solar panels */}
@@ -456,9 +485,10 @@ function Satellite({ satellite, index }) {
 }
 
 // Probe component with laser capabilities
-function Probe({ probe, index }) {
+function Probe({ probe, index, onUpgrade }) {
   const probeRef = useRef();
   const [hovered, setHovered] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
   const radius = 2.8;
   const speed = 0.6;
   
@@ -466,6 +496,15 @@ function Probe({ probe, index }) {
   const orbitPosition = probe?.orbitPosition || (index * Math.PI * 2) / 3 + Math.PI;
   const level = probe?.level || 1;
   const laserPower = probe?.laserPower || 100;
+  
+  const handleClick = async (e) => {
+    e.stopPropagation();
+    if (upgrading || !onUpgrade || level >= 3) return;
+    
+    setUpgrading(true);
+    await onUpgrade(probe.id, 'probe');
+    setUpgrading(false);
+  };
   
   useFrame(({ clock }) => {
     if (probeRef.current) {
@@ -484,28 +523,47 @@ function Probe({ probe, index }) {
       {hovered && (
         <Html distanceFactor={10}>
           <div className="bg-black/95 text-white px-3 py-2 rounded-lg border-2 border-neon-green text-xs font-mono whitespace-nowrap pointer-events-none shadow-2xl">
-            <div className="font-bold text-neon-green text-sm mb-1">🚀 Probe Level {level}</div>
+            <div className="font-bold text-neon-green text-sm mb-1">🚀 Probe Level {level}/3</div>
             <div className="text-gray-300">Laser Power: {laserPower}%</div>
-            <div className="text-gray-400">Status: Armed</div>
-            <div className="text-yellow-400 mt-2 border-t border-gray-600 pt-1 text-center">
-              🖱️ Click to upgrade
-            </div>
+            <div className="text-gray-400">Status: {upgrading ? 'Upgrading...' : 'Armed'}</div>
+            {level < 3 && (
+              <div className="mt-2 border-t border-gray-600 pt-1">
+                <div className="text-neon-green text-center font-bold">🖱️ Click to upgrade</div>
+                <div className="text-yellow-400 text-center">
+                  Cost: ${level * 150}K → Power: {laserPower + 50}%
+                </div>
+              </div>
+            )}
+            {level >= 3 && (
+              <div className="text-green-400 mt-2 border-t border-gray-600 pt-1 text-center">
+                ⭐ MAX LEVEL
+              </div>
+            )}
           </div>
         </Html>
       )}
       {/* Probe body - cone shape */}
       <mesh 
         rotation={[0, 0, Math.PI / 2]}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = level < 3 ? 'pointer' : 'default';
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          setHovered(false);
+          document.body.style.cursor = 'default';
+        }}
+        onClick={handleClick}
       >
         <coneGeometry args={[0.06, 0.15, 8]} />
         <meshStandardMaterial 
-          color="#00ff88" 
+          color={level >= 3 ? "#ffaa00" : "#00ff88"} 
           metalness={0.7} 
           roughness={0.3}
-          emissive="#00ff88"
-          emissiveIntensity={hovered ? 0.5 : 0}
+          emissive={level >= 3 ? "#ffaa00" : "#00ff88"}
+          emissiveIntensity={hovered ? 0.8 : (level >= 3 ? 0.3 : 0)}
         />
       </mesh>
       {/* Engine glow */}
@@ -556,7 +614,7 @@ function ResearchStation({ index }) {
 }
 
 // Main 3D Scene
-function Scene({ threats, gameState, onDeflectAsteroid }) {
+function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade }) {
   return (
     <>
       {/* Ambient light for overall illumination */}
@@ -592,12 +650,12 @@ function Scene({ threats, gameState, onDeflectAsteroid }) {
       
       {/* Deployed Satellites with detection radii */}
       {gameState && Array.isArray(gameState.satellites) && gameState.satellites.map((satellite, index) => (
-        <Satellite key={satellite.id || `sat-${index}`} satellite={satellite} index={index} />
+        <Satellite key={satellite.id || `sat-${index}`} satellite={satellite} index={index} onUpgrade={onUpgrade} />
       ))}
       
       {/* Deployed Probes */}
       {gameState && Array.isArray(gameState.probes) && gameState.probes.map((probe, index) => (
-        <Probe key={probe.id || `probe-${index}`} probe={probe} index={index} />
+        <Probe key={probe.id || `probe-${index}`} probe={probe} index={index} onUpgrade={onUpgrade} />
       ))}
       
       {/* Research Stations */}
@@ -656,14 +714,19 @@ function Scene({ threats, gameState, onDeflectAsteroid }) {
 }
 
 // Main Earth3D component
-const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null }) => {
+const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onUpgrade = null }) => {
   return (
     <div className="w-full h-full bg-black rounded-lg overflow-hidden relative">
       <Canvas
         camera={{ position: [0, 3, 8], fov: 50 }}
         gl={{ antialias: true, alpha: false }}
       >
-        <Scene threats={threats} gameState={gameState} onDeflectAsteroid={onDeflectAsteroid} />
+        <Scene 
+          threats={threats} 
+          gameState={gameState} 
+          onDeflectAsteroid={onDeflectAsteroid} 
+          onUpgrade={onUpgrade}
+        />
       </Canvas>
     </div>
   );
