@@ -1,8 +1,16 @@
+import '../config/env.js'; // Load environment variables FIRST
 import axios from "axios";
 
 const NASA_API_KEY = process.env.NASA_API_KEY || "DEMO_KEY";
 const NEO_API_BASE = "https://api.nasa.gov/neo/rest/v1";
 const EPIC_API_BASE = "https://api.nasa.gov/EPIC/api";
+
+// Verify API key on module load
+if (NASA_API_KEY === "DEMO_KEY") {
+  console.warn("⚠️  NASA Service: Using DEMO_KEY (rate limits apply)");
+} else {
+  console.log(`✅ NASA Service: Custom API key loaded (${NASA_API_KEY.substring(0, 8)}...)`);
+}
 
 // Cache for NASA data
 let cachedNEOData = null;

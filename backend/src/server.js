@@ -1,12 +1,10 @@
+import './config/env.js'; // Load environment variables FIRST
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import eventRoutes from './routes/events.js';
 import neoRoutes from './routes/neo.js';
 import epicRoutes from './routes/epic.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
