@@ -88,7 +88,7 @@ class GameService {
     }
   }
 
-  // Generate simulated asteroid events (fallback when NASA API fails)
+  // Generate simulated asteroid events with approach mechanics
   generateSimulatedAsteroidEvents() {
     const events = [];
     const numAsteroids = Math.floor(Math.random() * 3) + 1; // 1-3 asteroids
@@ -96,8 +96,17 @@ class GameService {
     for (let i = 0; i < numAsteroids; i++) {
       const diameter = Math.floor(Math.random() * 500) + 50; // 50-550m
       const velocity = Math.floor(Math.random() * 20) + 5; // 5-25 km/s
-      const missDistance = Math.floor(Math.random() * 5000000) + 500000; // 500k-5.5M km
+      const distance = Math.floor(Math.random() * 3000000) + 500000; // 0.5M-3.5M km from Earth
       const isHazardous = Math.random() < 0.3;
+      
+      // Calculate time to impact (in game minutes - faster for gameplay)
+      // Real: distance (km) / velocity (km/s) / 60 = minutes
+      // For gameplay, we'll scale it down
+      const realMinutes = (distance / velocity) / 60;
+      const gameMinutes = realMinutes / 60; // 1 hour in real = 1 minute in game
+      
+      // Random approach angle (where it's coming from)
+      const approachAngle = Math.random() * Math.PI * 2;
       
       const asteroidId = `SIM-${Date.now()}-${i}`;
       const asteroidName = `(${2000 + Math.floor(Math.random() * 25)}) ${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 999)}`;
@@ -107,8 +116,14 @@ class GameService {
         name: asteroidName,
         diameter,
         velocity,
-        missDistance,
-        isHazardous
+        distance, // Current distance from Earth
+        missDistance: Math.random() * 20000 + 5000, // Will it hit? (very close miss distance = likely hit)
+        isHazardous,
+        // Approach mechanics
+        approachAngle, // Direction it's coming from (radians)
+        timeToImpact: gameMinutes, // Minutes until impact
+        detectedAt: Date.now(), // When we first saw it
+        impactProbability: this.calculateImpactProbability(diameter, distance)
       };
       
       const riskLevel = nasaService.calculateRiskLevel(asteroid);
@@ -118,8 +133,8 @@ class GameService {
           id: `asteroid_${asteroidId}`,
           type: 'asteroid_detected',
           severity: riskLevel,
-          title: `Asteroid ${asteroidName} Detected`,
-          description: `Simulated asteroid approaching Earth. Diameter: ${Math.round(diameter)}m, Velocity: ${Math.round(velocity)} km/s, Miss Distance: ${Math.round(missDistance / 1000)}k km`,
+          title: `⚠️ ${asteroidName} Approaching`,
+          description: `INCOMING! ETA: ${gameMinutes.toFixed(1)} min | ${Math.round(diameter)}m | ${Math.round(velocity)} km/s | ${Math.round(distance / 1000)}k km`,
           data: asteroid,
           timestamp: new Date().toISOString(),
           requiresAction: true
@@ -133,6 +148,18 @@ class GameService {
     }
     
     return events;
+  }
+  
+  // Calculate impact probability based on size and distance
+  calculateImpactProbability(diameter, distance) {
+    // Larger asteroids detected further out = lower initial probability
+    // Smaller asteroids detected close = higher probability (less time)
+    let baseProbability = 0.3;
+    
+    if (distance < 1000000) baseProbability += 0.3; // Very close!
+    if (diameter > 200) baseProbability += 0.2; // Large and dangerous
+    
+    return Math.min(0.9, baseProbability); // Cap at 90%
   }
 
   // Generate random events for game variety

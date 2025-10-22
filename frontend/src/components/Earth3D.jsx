@@ -119,59 +119,65 @@ function createAsteroidGeometry(size, seed) {
   return geometry;
 }
 
-// Asteroid marker component with real NASA orbital data
+// Asteroid marker component - APPROACHING Earth (not orbiting)
 function AsteroidMarker({ threat, index, onDeflect }) {
   const markerRef = useRef();
   const [hovered, setHovered] = useState(false);
   
-  // Use real NASA data if available for more accurate positioning
-  const useRealData = threat.missDistance && threat.velocity;
+  // Approach mechanics from threat data
+  const approachAngle = threat.data?.approachAngle || (index * Math.PI * 2) / 5;
+  const velocity = parseFloat(threat.data?.velocity) || 10;
+  const timeToImpact = threat.data?.timeToImpact || 5; // minutes
+  const detectedAt = threat.data?.detectedAt || Date.now();
   
-  // Calculate orbital parameters from real NASA data
-  // missDistance is in km, velocity is in km/s
-  const radius = useRealData 
-    ? Math.max(3.5, Math.min(5.5, 3.5 + (parseFloat(threat.missDistance) / 1000000))) // Scale based on miss distance
-    : 3 + (index * 0.3);
-    
-  const speed = useRealData
-    ? Math.max(0.1, Math.min(0.8, parseFloat(threat.velocity) / 50)) // Scale based on velocity
-    : 0.5 + (index * 0.1);
-    
-  const offset = (index * Math.PI * 2) / 5; // Spread evenly
-  const initialAngle = useRealData && threat.approachDate
-    ? (new Date(threat.approachDate).getTime() / 100000) % (Math.PI * 2)
-    : offset;
+  // Calculate current distance based on time elapsed
+  // Start far away, move toward Earth over time
+  const startDistance = 8; // Start far from Earth
+  const earthRadius = 2; // Earth sphere radius
   
   // Track position for when paused
-  const pausedPosition = useRef({ x: 0, y: 0, z: 0, angle: 0 });
+  const pausedPosition = useRef({ x: 0, y: 0, z: 0 });
+  const pausedTime = useRef(0);
   
   useFrame(({ clock }) => {
     if (markerRef.current) {
-      if (hovered) {
-        // FREEZE completely when hovered - use last known position
-        markerRef.current.position.x = pausedPosition.current.x;
-        markerRef.current.position.z = pausedPosition.current.z;
-        markerRef.current.position.y = pausedPosition.current.y;
-        // Very slow rotation when paused
-        markerRef.current.rotation.x += 0.001;
-        markerRef.current.rotation.y += 0.0005;
-      } else {
-        // Normal movement when not hovered
-        const t = clock.getElapsedTime() * speed + initialAngle;
-        const x = Math.cos(t) * radius;
-        const z = Math.sin(t) * radius;
-        const y = Math.sin(t * 0.5) * 0.5;
-        
-        markerRef.current.position.x = x;
-        markerRef.current.position.z = z;
-        markerRef.current.position.y = y;
-        
-        // Save position for when we pause
-        pausedPosition.current = { x, y, z, angle: t };
-        
-        // Normal rotation
-        markerRef.current.rotation.x += 0.01;
-        markerRef.current.rotation.y += 0.005;
+      const currentTime = hovered ? pausedTime.current : clock.getElapsedTime();
+      
+      if (!hovered) {
+        pausedTime.current = currentTime;
+      }
+      
+      // Time since detection (seconds)
+      const elapsedSeconds = currentTime;
+      const elapsedMinutes = elapsedSeconds / 60;
+      
+      // Calculate progress: 0 (far) to 1 (Earth)
+      const progress = Math.min(1, elapsedMinutes / Math.max(0.1, timeToImpact));
+      
+      // Linear approach toward Earth
+      const currentDistance = startDistance - (startDistance - earthRadius) * progress;
+      
+      // Position along approach vector
+      const x = Math.cos(approachAngle) * currentDistance;
+      const z = Math.sin(approachAngle) * currentDistance;
+      const y = Math.sin(approachAngle * 0.5) * 0.3; // Slight vertical variation
+      
+      markerRef.current.position.x = x;
+      markerRef.current.position.z = z;
+      markerRef.current.position.y = y;
+      
+      // Save position for when we pause
+      pausedPosition.current = { x, y, z };
+      
+      // Rotation speed based on hover
+      const rotationSpeed = hovered ? 0.001 : 0.01;
+      markerRef.current.rotation.x += rotationSpeed;
+      markerRef.current.rotation.y += rotationSpeed * 0.5;
+      
+      // Check if asteroid reached Earth (impact!)
+      if (progress >= 1 && !hovered) {
+        // TODO: Trigger impact event
+        console.warn(`Asteroid ${threat.title} IMPACT!`);
       }
     }
   });
@@ -259,15 +265,51 @@ function AsteroidMarker({ threat, index, onDeflect }) {
         </>
       )}
       
-      {/* Tooltip */}
+      {/* Countdown Timer (always visible) */}
+      <Html distanceFactor={10} position={[0, getSize() * 2.5, 0]}>
+        <div className="bg-black/80 px-2 py-1 rounded border border-neon-red text-xs font-mono font-bold whitespace-nowrap pointer-events-none text-center">
+          <div className="text-neon-red">
+            ⏱️ {(() => {
+              const elapsedMinutes = (useRef(0).current || 0) / 60;
+              const remainingMinutes = Math.max(0, timeToImpact - elapsedMinutes);
+              const mins = Math.floor(remainingMinutes);
+              const secs = Math.floor((remainingMinutes - mins) * 60);
+              return `${mins}:${secs.toString().padStart(2, '0')}`;
+            })()}
+          </div>
+        </div>
+      </Html>
+      
+      {/* Trajectory line showing path to Earth */}
+      <line>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={2}
+            array={new Float32Array([
+              markerRef.current?.position.x || 0,
+              markerRef.current?.position.y || 0,
+              markerRef.current?.position.z || 0,
+              0, 0, 0 // Earth center
+            ])}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color={getColor()} transparent opacity={0.3} linewidth={2} />
+      </line>
+      
+      {/* Tooltip on hover */}
       {hovered && (
         <Html distanceFactor={10}>
-          <div className="bg-black/90 text-white px-3 py-2 rounded-lg border border-neon-red text-xs font-mono whitespace-nowrap pointer-events-none">
-            <div className="font-bold text-neon-red">⚠️ {threat.title}</div>
-            <div className="text-gray-300">Risk: {threat.severity.toUpperCase()}</div>
-            {threat.diameter && <div className="text-gray-400">Diameter: {(parseFloat(threat.diameter) / 1000).toFixed(1)} km</div>}
-            {threat.velocity && <div className="text-gray-400">Velocity: {parseFloat(threat.velocity).toFixed(1)} km/s</div>}
-            <div className="text-neon-green mt-1 text-center">🖱️ Click to deflect</div>
+          <div className="bg-black/95 text-white px-3 py-2 rounded-lg border-2 border-neon-red text-xs font-mono whitespace-nowrap pointer-events-none shadow-2xl">
+            <div className="font-bold text-neon-red text-sm mb-1">⚠️ {threat.title}</div>
+            <div className="text-orange-400">Risk: {threat.severity.toUpperCase()}</div>
+            {threat.data?.diameter && <div className="text-gray-300">Size: {Math.round(threat.data.diameter)}m</div>}
+            {threat.data?.velocity && <div className="text-gray-300">Speed: {Math.round(threat.data.velocity)} km/s</div>}
+            {threat.data?.distance && <div className="text-gray-400">Distance: {Math.round(threat.data.distance / 1000)}k km</div>}
+            <div className="text-neon-green mt-2 text-center font-bold border-t border-gray-600 pt-1">
+              🎯 CLICK TO DEFLECT
+            </div>
           </div>
         </Html>
       )}
