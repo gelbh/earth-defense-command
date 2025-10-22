@@ -19,7 +19,7 @@ class GameService {
       },
       events: [],
       threats: [],
-      earthDamage: 0,
+      earthHealth: 100,
       reputation: 100
     };
     
@@ -265,6 +265,12 @@ class GameService {
   // Check if an asteroid is detected by any satellite (3D SPHERICAL RADAR)
   isAsteroidDetected(asteroid) {
     if (!asteroid.data) return false;
+    
+    // NASA real asteroids always detected (they don't have approach mechanics)
+    // Real NASA asteroids don't have approachAngle/polarAngle/timeToImpact
+    if (!asteroid.data.approachAngle && !asteroid.data.polarAngle && !asteroid.data.timeToImpact) {
+      return true; // Real NASA data - always show
+    }
     
     const elapsedMinutes = (this.gameState.day - 1) * 1440; // Minutes since game start
     const asteroidPos = this.calculateAsteroidPosition3D(asteroid, elapsedMinutes);
@@ -519,7 +525,7 @@ class GameService {
           result.success = false;
           result.message = `Failed to deflect ${threat.data.name}`;
           result.scoreChange = -100;
-          this.gameState.earthDamage += 5;
+          this.gameState.earthHealth -= 5;
           this.gameState.reputation -= 5;
         }
         break;
@@ -572,6 +578,69 @@ class GameService {
         result.scoreChange = 150;
         break;
 
+      case 'asteroid_impact':
+        // Handle real-time asteroid impact from 3D visualization
+        const impactThreat = this.gameState.threats.find(t => t.id === targetId);
+        if (!impactThreat) {
+          result.message = 'Threat not found or already processed';
+          result.success = false;
+          break;
+        }
+        
+        // Calculate damage based on asteroid severity and size
+        const impactDiameter = impactThreat.data?.diameter || 50;
+        let damage = 0;
+        let reputationLoss = 0;
+        let scoreLoss = 0;
+        
+        if (impactThreat.severity === 'critical' || impactDiameter > 500) {
+          damage = 15; // 15% Earth health
+          reputationLoss = 10;
+          scoreLoss = 200;
+        } else if (impactThreat.severity === 'moderate' || impactDiameter > 200) {
+          damage = 8; // 8% Earth health
+          reputationLoss = 5;
+          scoreLoss = 100;
+        } else {
+          damage = 3; // 3% Earth health for small asteroids
+          reputationLoss = 2;
+          scoreLoss = 50;
+        }
+        
+        this.gameState.earthHealth -= damage;
+        this.gameState.reputation -= reputationLoss;
+        this.gameState.score -= scoreLoss;
+        
+        // Cap earth health
+        this.gameState.earthHealth = Math.max(0, Math.min(100, this.gameState.earthHealth));
+        
+        // Remove the threat from active threats
+        this.gameState.threats = this.gameState.threats.filter(t => t.id !== targetId);
+        
+        // Add impact event to history
+        this.gameState.events.unshift({
+          id: `impact-${Date.now()}`,
+          type: 'asteroid_impact',
+          severity: impactThreat.severity,
+          title: `💥 ${impactThreat.data?.name || 'Asteroid'} Impact!`,
+          description: `Direct impact! Earth health -${damage}%, Reputation -${reputationLoss}`,
+          timestamp: new Date().toISOString(),
+          icon: '💥'
+        });
+        
+        result.success = true;
+        result.message = `${impactThreat.data?.name || 'Asteroid'} impacted Earth! -${damage}% health`;
+        result.scoreChange = -scoreLoss;
+        result.damage = damage;
+        result.earthHealth = this.gameState.earthHealth;
+        
+        // Check for game over
+        if (this.gameState.earthHealth <= 0) {
+          result.gameOver = true;
+          result.message = 'Earth\'s health has reached critical levels. Mission failed.';
+        }
+        break;
+
       default:
         result.message = 'Unknown action type';
     }
@@ -580,9 +649,9 @@ class GameService {
     this.gameState.score += result.scoreChange;
     
     // Check for game over conditions
-    if (this.gameState.earthDamage >= 100) {
+    if (this.gameState.earthHealth <= 0) {
       result.gameOver = true;
-      result.message = 'Earth has sustained too much damage. Mission failed.';
+      result.message = 'Earth\'s health has reached critical levels. Mission failed.';
     }
 
     return result;
@@ -702,15 +771,15 @@ class GameService {
     const moderateThreats = this.gameState.threats.filter(t => t.severity === 'moderate');
     
     if (criticalThreats.length > 0) {
-      const damage = criticalThreats.length * 15; // 15% damage per critical threat
-      this.gameState.earthDamage += damage;
+      const damage = criticalThreats.length * 15; // 15% health loss per critical threat
+      this.gameState.earthHealth -= damage;
       this.gameState.reputation -= criticalThreats.length * 10;
       this.gameState.score -= criticalThreats.length * 200;
     }
     
     if (moderateThreats.length > 0) {
-      const damage = moderateThreats.length * 8; // 8% damage per moderate threat
-      this.gameState.earthDamage += damage;
+      const damage = moderateThreats.length * 8; // 8% health loss per moderate threat
+      this.gameState.earthHealth -= damage;
       this.gameState.reputation -= moderateThreats.length * 5;
       this.gameState.score -= moderateThreats.length * 100;
     }
@@ -731,13 +800,13 @@ class GameService {
     const fundBonus = Math.max(0, this.gameState.reputation) * 500;
     this.gameState.funds += 50000 + fundBonus;
     
-    // Reduce earth damage slightly (healing) - only if no unhandled threats
+    // Restore earth health slightly (healing) - only if no unhandled threats
     if (criticalThreats.length === 0 && moderateThreats.length === 0) {
-      this.gameState.earthDamage = Math.max(0, this.gameState.earthDamage - 2);
+      this.gameState.earthHealth = Math.min(100, this.gameState.earthHealth + 2);
     }
     
-    // Cap earth damage at 100%
-    this.gameState.earthDamage = Math.min(100, this.gameState.earthDamage);
+    // Cap earth health between 0% and 100%
+    this.gameState.earthHealth = Math.max(0, Math.min(100, this.gameState.earthHealth));
     
     // Generate new events for the new day
     await this.generateEvents();
@@ -764,7 +833,7 @@ class GameService {
       },
       events: [],
       threats: [],
-      earthDamage: 0,
+      earthHealth: 100,
       reputation: 100
     };
     

@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, Suspense, useState } from 'react';
+import React, { useRef, useMemo, Suspense, useState, useEffect } from 'react';
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
 import { OrbitControls, Sphere, Stars, Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -126,7 +126,7 @@ function BurnupEffect({ position, intensity = 1 }) {
   const [opacity, setOpacity] = useState(1);
   
   useFrame(({ clock }) => {
-    if (fireballRef.current) {
+    if (fireballRef.current && opacity > 0) {
       // Pulsing fire effect
       const pulse = Math.sin(clock.getElapsedTime() * 20) * 0.3 + 0.7;
       fireballRef.current.material.opacity = pulse * opacity;
@@ -137,20 +137,23 @@ function BurnupEffect({ position, intensity = 1 }) {
     }
     
     // Fade out over time
-    setOpacity(prev => Math.max(0, prev - 0.01));
+    if (opacity > 0) {
+      setOpacity(prev => Math.max(0, prev - 0.01));
+    }
   });
   
-  if (opacity <= 0) return null;
+  // Always render, but make invisible when faded - no early return to avoid hook violations
+  const effectOpacity = Math.max(0, opacity);
   
   return (
-    <group position={position}>
+    <group position={position} visible={effectOpacity > 0.01}>
       {/* Main fireball */}
       <mesh ref={fireballRef}>
         <sphereGeometry args={[0.15 * intensity, 16, 16]} />
         <meshBasicMaterial 
           color="#ff4400" 
           transparent 
-          opacity={0.8}
+          opacity={0.8 * effectOpacity}
         />
       </mesh>
       
@@ -160,7 +163,7 @@ function BurnupEffect({ position, intensity = 1 }) {
         <meshBasicMaterial 
           color="#ffaa00" 
           transparent 
-          opacity={0.9}
+          opacity={0.9 * effectOpacity}
         />
       </mesh>
       
@@ -170,14 +173,14 @@ function BurnupEffect({ position, intensity = 1 }) {
         <meshBasicMaterial 
           color="#ffffff" 
           transparent 
-          opacity={1}
+          opacity={1 * effectOpacity}
         />
       </mesh>
       
       {/* Glow effect */}
       <pointLight 
         position={[0, 0, 0]} 
-        intensity={intensity * 3} 
+        intensity={intensity * 3 * effectOpacity} 
         color="#ff6600" 
         distance={2} 
       />
@@ -188,7 +191,7 @@ function BurnupEffect({ position, intensity = 1 }) {
         <meshBasicMaterial 
           color="#ff8800" 
           transparent 
-          opacity={0.6}
+          opacity={0.6 * effectOpacity}
         />
       </mesh>
     </group>
@@ -196,11 +199,12 @@ function BurnupEffect({ position, intensity = 1 }) {
 }
 
 // Asteroid marker component - APPROACHING Earth (not orbiting)
-function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
+function AsteroidMarker({ threat, index, onDeflect, onImpact, isPaused = false }) {
   const markerRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [burnedUp, setBurnedUp] = useState(false);
   const [showBurnup, setShowBurnup] = useState(false);
+  const impactTriggeredRef = useRef(false); // Track if impact already triggered
   
   // Timestamp-based animation
   const startTimeRef = useRef(Date.now());
@@ -269,7 +273,7 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
       markerRef.current.rotation.y += rotationSpeed * 0.5;
       
       // Check for atmospheric burnup (small asteroids burn up < 25m diameter)
-      if (currentDistance <= atmosphereRadius && diameter < 25) {
+      if (currentDistance <= atmosphereRadius && diameter < 25 && !impactTriggeredRef.current) {
         setShowBurnup(true);
         setTimeout(() => {
           setBurnedUp(true);
@@ -277,29 +281,51 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
       }
       
       // Check if asteroid reached Earth (impact!)
-      if (currentDistance <= earthRadius && !hovered && diameter >= 25) {
-        console.warn(`Asteroid ${threat.title} IMPACT! Damage incoming...`);
+      if (currentDistance <= earthRadius && !hovered && diameter >= 25 && !impactTriggeredRef.current) {
+        console.warn(`💥 Asteroid ${threat.title} IMPACT! Processing damage...`);
+        impactTriggeredRef.current = true; // Prevent multiple impacts
+        
+        // Trigger impact handler with actual impact position
+        if (onImpact) {
+          onImpact(threat, [x, y, z]); // Pass the actual asteroid position
+        }
+        
+        // Hide asteroid after impact (short delay for visual effect)
+        setTimeout(() => {
+          setBurnedUp(true);
+        }, 500);
       }
     }
   });
-  
-  // Don't render if burned up
-  if (burnedUp) return null;
 
   const handleClick = (e) => {
     e.stopPropagation();
-    if (onDeflect) {
-      onDeflect(threat);
+    if (onDeflect && markerRef.current) {
+      // Pass the threat with current position data for laser targeting
+      const threatWithPosition = {
+        ...threat,
+        currentPosition: [
+          markerRef.current.position.x,
+          markerRef.current.position.y,
+          markerRef.current.position.z
+        ]
+      };
+      onDeflect(threatWithPosition);
     }
   };
 
-  // Color based on severity
+  // Realistic asteroid color - brownish-gray rock
   const getColor = () => {
+    return '#8b7355'; // Brownish-gray for rocky appearance
+  };
+  
+  // Get severity-based glow color for effects only
+  const getGlowColor = () => {
     switch (threat.severity) {
       case 'critical': return '#ff0040';
       case 'moderate': return '#ff8800';
       case 'low': return '#ffd700';
-      default: return '#00ff88';
+      default: return '#888888';
     }
   };
 
@@ -323,6 +349,11 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
 
   // Create irregular asteroid geometry
   const asteroidGeometry = useMemo(() => createAsteroidGeometry(getSize(), index * 42), [index]);
+
+  // Don't render if burned up - but keep it after all hooks to avoid violations
+  if (burnedUp) {
+    return null;
+  }
 
   return (
     <group ref={markerRef}>
@@ -348,44 +379,29 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
       <mesh geometry={asteroidGeometry}>
         <meshStandardMaterial
           color={getColor()}
-          emissive={getColor()}
-          emissiveIntensity={hovered ? 0.8 : 0.5}
-          roughness={0.8}
-          metalness={0.2}
+          emissive={hovered ? getGlowColor() : '#3a2f25'}
+          emissiveIntensity={hovered ? 0.3 : 0.15}
+          roughness={0.9}
+          metalness={0.1}
         />
       </mesh>
+      
+      {/* Point light to make asteroid more visible */}
+      <pointLight position={[0, 0, 0]} intensity={0.5} color="#ffffff" distance={0.5} />
       
       {/* Selection ring when hovered */}
       {hovered && (
         <>
           <mesh rotation={[Math.PI / 2, 0, 0]}>
             <torusGeometry args={[getSize() * 2, 0.01, 8, 32]} />
-            <meshBasicMaterial color={getColor()} transparent opacity={0.8} />
+            <meshBasicMaterial color={getGlowColor()} transparent opacity={0.8} />
           </mesh>
           <mesh rotation={[0, Math.PI / 2, 0]}>
             <torusGeometry args={[getSize() * 2, 0.01, 8, 32]} />
-            <meshBasicMaterial color={getColor()} transparent opacity={0.8} />
+            <meshBasicMaterial color={getGlowColor()} transparent opacity={0.8} />
           </mesh>
         </>
       )}
-      
-      {/* Trajectory line showing path to Earth */}
-      <line>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={2}
-            array={new Float32Array([
-              markerRef.current?.position.x || 0,
-              markerRef.current?.position.y || 0,
-              markerRef.current?.position.z || 0,
-              0, 0, 0 // Earth center
-            ])}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial color={getColor()} transparent opacity={0.3} linewidth={2} />
-      </line>
       
       {/* Atmospheric Burnup Effect */}
       {showBurnup && (
@@ -422,22 +438,16 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
         </Html>
       )}
       
-      {/* Pulsing outer glow */}
-      <Sphere args={[getSize() * 1.5, 16, 16]}>
-        <meshBasicMaterial
-          color={getColor()}
-          transparent
-          opacity={0.3}
-          side={THREE.BackSide}
-        />
-      </Sphere>
-
-      {/* Warning cone pointing to Earth */}
+      {/* Pulsing outer glow - only visible for critical threats */}
       {threat.severity === 'critical' && (
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[0.05, 0.3, 8]} />
-          <meshBasicMaterial color="#ff0040" transparent opacity={0.6} />
-        </mesh>
+        <Sphere args={[getSize() * 1.5, 16, 16]}>
+          <meshBasicMaterial
+            color={getGlowColor()}
+            transparent
+            opacity={0.2}
+            side={THREE.BackSide}
+          />
+        </Sphere>
       )}
     </group>
   );
@@ -642,14 +652,14 @@ function LaserBeam({ startPosition, endPosition, level = 1, intensity = 1 }) {
     }
   };
   
-  const beamThickness = 0.02 + (level * 0.015); // Thicker at higher levels
+  const beamThickness = 0.04 + (level * 0.02); // Thicker at higher levels for better visibility
   const color = getBeamColor(level);
   
   // Animate intensity
   useFrame(({ clock }) => {
     if (beamRef.current) {
       const pulse = Math.sin(clock.getElapsedTime() * 10) * 0.3 + 0.7;
-      beamRef.current.material.opacity = intensity * pulse;
+      beamRef.current.material.opacity = intensity * pulse * 0.9; // Slightly more opaque
     }
   });
   
@@ -675,22 +685,25 @@ function LaserBeam({ startPosition, endPosition, level = 1, intensity = 1 }) {
         <meshBasicMaterial 
           color={color} 
           transparent 
-          opacity={0.8}
+          opacity={0.95}
+          blending={THREE.AdditiveBlending}
         />
       </mesh>
       
       {/* Core glow */}
       <mesh>
-        <cylinderGeometry args={[beamThickness * 0.3, beamThickness * 0.15, distance, 8]} />
+        <cylinderGeometry args={[beamThickness * 0.4, beamThickness * 0.2, distance, 8]} />
         <meshBasicMaterial 
           color="#ffffff" 
           transparent 
-          opacity={0.9}
+          opacity={0.95}
+          blending={THREE.AdditiveBlending}
         />
       </mesh>
       
       {/* Particles at impact point */}
-      <pointLight position={[0, distance / 2, 0]} intensity={level * 2} color={color} distance={1} />
+      <pointLight position={[0, distance / 2, 0]} intensity={level * 3} color={color} distance={2} />
+      <pointLight position={[0, -distance / 2, 0]} intensity={level * 2} color={color} distance={2} />
     </group>
   );
 }
@@ -856,7 +869,7 @@ function ResearchStation({ index }) {
 }
 
 // Main 3D Scene
-function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers = [], isPaused = false }) {
+function Scene({ threats, gameState, onDeflectAsteroid, onImpact, onUpgrade, activeLasers = [], impactFlashes = [], isPaused = false }) {
   return (
     <>
       {/* Ambient light for overall illumination */}
@@ -939,6 +952,7 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers 
           threat={threat} 
           index={index}
           onDeflect={onDeflectAsteroid}
+          onImpact={onImpact}
           isPaused={isPaused}
         />
       ))}
@@ -946,11 +960,19 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers 
       {/* Active laser beams */}
       {activeLasers.map((laser) => (
         <LaserBeam
-          key={`laser-${laser.probeId}-${laser.targetId}`}
+          key={laser.id}
           startPosition={laser.startPosition}
           endPosition={laser.endPosition}
           level={laser.level}
           intensity={laser.intensity}
+        />
+      ))}
+      
+      {/* Impact flash effects */}
+      {impactFlashes.map((flash) => (
+        <ImpactFlash
+          key={flash.id}
+          position={flash.position}
         />
       ))}
       
@@ -967,36 +989,132 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers 
   );
 }
 
+// Impact flash effect component
+function ImpactFlash({ position = [0, 0, 0], onComplete }) {
+  const flashRef = useRef();
+  const [scale, setScale] = useState(0.1);
+  const [opacity, setOpacity] = useState(1);
+  
+  useEffect(() => {
+    let startTime = Date.now();
+    const duration = 1000; // 1 second flash
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      
+      setScale(0.1 + progress * 1.5); // Expand from 0.1 to 1.6
+      setOpacity(1 - progress); // Fade out
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        onComplete && onComplete();
+      }
+    };
+    
+    animate();
+  }, [onComplete]);
+  
+  return (
+    <group position={position}>
+      <mesh ref={flashRef} scale={[scale, scale, scale]}>
+        <sphereGeometry args={[0.5, 16, 16]} />
+        <meshBasicMaterial 
+          color="#ff4400" 
+          transparent 
+          opacity={opacity}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+      <pointLight 
+        color="#ff4400" 
+        intensity={opacity * 3} 
+        distance={5}
+      />
+    </group>
+  );
+}
+
 // Main Earth3D component
-const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onUpgrade = null }) => {
+const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onImpact = null, onUpgrade = null }) => {
   const [activeLasers, setActiveLasers] = useState([]);
+  const [impactFlashes, setImpactFlashes] = useState([]);
   const [isPaused, setIsPaused] = useState(false);
+  
+  // Wrapper for impact that shows flash effect
+  const handleImpactWithFlash = (threat, asteroidPosition) => {
+    if (!onImpact) return;
+    
+    // Use actual asteroid position at moment of impact
+    const earthRadius = 2;
+    
+    // Normalize position to Earth surface
+    const magnitude = Math.sqrt(
+      asteroidPosition[0] ** 2 + 
+      asteroidPosition[1] ** 2 + 
+      asteroidPosition[2] ** 2
+    );
+    const surfacePosition = [
+      (asteroidPosition[0] / magnitude) * earthRadius,
+      (asteroidPosition[1] / magnitude) * earthRadius,
+      (asteroidPosition[2] / magnitude) * earthRadius
+    ];
+    
+    // Add flash effect at actual impact location
+    const flashId = `impact-${Date.now()}`;
+    setImpactFlashes(prev => [...prev, {
+      id: flashId,
+      position: surfacePosition
+    }]);
+    
+    // Remove flash after animation
+    setTimeout(() => {
+      setImpactFlashes(prev => prev.filter(f => f.id !== flashId));
+    }, 1200);
+    
+    // Process the impact
+    onImpact(threat);
+  };
   
   // Wrapper for deflect that shows laser beam
   const handleDeflectWithLaser = async (threat) => {
     if (!onDeflectAsteroid || !gameState) return;
     
+    // Check if we have available probe missions (not just deployed probes)
+    if (!gameState.availableProbes || gameState.availableProbes <= 0) {
+      // No probe missions available - execute deflection without laser visual
+      return onDeflectAsteroid(threat);
+    }
+    
     // Find nearest probe to the asteroid
     const asteroidPosition = calculateAsteroidPosition(threat);
     const nearestProbe = findNearestProbe(gameState.probes, asteroidPosition);
     
-    if (!nearestProbe) {
-      // No probe available, just deflect
+    // If no probe with line of sight, use any available probe (gameplay over realism)
+    let selectedProbe = nearestProbe;
+    if (!selectedProbe && gameState.probes.length > 0) {
+      selectedProbe = gameState.probes[0];
+      console.log('No line of sight - using first available probe');
+    }
+    
+    if (!selectedProbe) {
+      // No deployed probes - execute deflection without laser visual
       return onDeflectAsteroid(threat);
     }
     
     // Calculate probe position
-    const probePosition = calculateProbePosition(nearestProbe);
+    const probePosition = calculateProbePosition(selectedProbe);
     
     // Show laser beam
-    const laserId = `${nearestProbe.id}-${threat.id}-${Date.now()}`;
+    const laserId = `${selectedProbe.id}-${threat.id}-${Date.now()}`;
     setActiveLasers(prev => [...prev, {
       id: laserId,
-      probeId: nearestProbe.id,
+      probeId: selectedProbe.id,
       targetId: threat.id,
       startPosition: probePosition,
       endPosition: asteroidPosition,
-      level: nearestProbe.level || 1,
+      level: selectedProbe.level || 1,
       intensity: 1
     }]);
     
@@ -1017,6 +1135,11 @@ const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onU
   
   // Helper to calculate asteroid position based on approach data
   const calculateAsteroidPosition = (threat) => {
+    // Use actual current position if available (passed from asteroid click)
+    if (threat.currentPosition) {
+      return threat.currentPosition;
+    }
+    
     if (!threat?.data) return [0, 0, 0];
     
     const approachAngle = threat.data?.approachAngle || 0;
@@ -1030,7 +1153,6 @@ const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onU
     const earthRadius = 2;
     
     // Estimate current position (rough approximation for laser targeting)
-    // In a real scenario, we'd track actual elapsed time, but this is close enough for visual effect
     const estimatedProgress = 0.3; // Assume asteroid is ~30% along its path when clicked
     const estimatedDistance = startDistance * (1 - estimatedProgress);
     const currentDistance = Math.max(earthRadius, estimatedDistance);
@@ -1043,15 +1165,46 @@ const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onU
     return [x, y, z];
   };
   
-  // Helper to find nearest probe
+  // Helper to check if there's a clear line of sight (no Earth blocking)
+  const hasLineOfSight = (probePos, asteroidPos) => {
+    const earthRadius = 2; // Earth's radius in game units
+    
+    // Vector from probe to asteroid
+    const dx = asteroidPos[0] - probePos[0];
+    const dy = asteroidPos[1] - probePos[1];
+    const dz = asteroidPos[2] - probePos[2];
+    
+    // Find closest point on line segment to Earth center (0,0,0)
+    const t = -(probePos[0] * dx + probePos[1] * dy + probePos[2] * dz) / (dx * dx + dy * dy + dz * dz);
+    const clampedT = Math.max(0, Math.min(1, t));
+    
+    // Closest point coordinates
+    const closestX = probePos[0] + clampedT * dx;
+    const closestY = probePos[1] + clampedT * dy;
+    const closestZ = probePos[2] + clampedT * dz;
+    
+    // Distance from closest point to Earth center
+    const distanceToEarth = Math.sqrt(closestX * closestX + closestY * closestY + closestZ * closestZ);
+    
+    // Line of sight is clear if closest point is outside Earth
+    return distanceToEarth > earthRadius;
+  };
+  
+  // Helper to find nearest probe with line of sight
   const findNearestProbe = (probes, asteroidPosition) => {
     if (!Array.isArray(probes) || probes.length === 0) return null;
     
-    let nearest = probes[0];
+    let nearest = null;
     let minDistance = Infinity;
     
     probes.forEach(probe => {
       const probePos = calculateProbePosition(probe);
+      
+      // Check line of sight
+      if (!hasLineOfSight(probePos, asteroidPosition)) {
+        return; // Skip this probe, Earth is in the way
+      }
+      
       const dist = Math.sqrt(
         Math.pow(probePos[0] - asteroidPosition[0], 2) +
         Math.pow(probePos[1] - asteroidPosition[1], 2) +
@@ -1090,10 +1243,12 @@ const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onU
       >
         <Scene 
           threats={threats} 
-          gameState={gameState} 
-          onDeflectAsteroid={handleDeflectWithLaser} 
+          gameState={gameState}
+          onDeflectAsteroid={handleDeflectWithLaser}
+          onImpact={handleImpactWithFlash} 
           onUpgrade={onUpgrade}
           activeLasers={activeLasers}
+          impactFlashes={impactFlashes}
           isPaused={isPaused}
         />
       </Canvas>

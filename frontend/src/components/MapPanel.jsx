@@ -5,10 +5,18 @@ import Earth3D from './Earth3D';
 import Toast from './Toast';
 
 const MapPanel = ({ gameState, events, threats }) => {
-  const { processAction } = useGame();
+  const { processAction, startGame } = useGame();
   const [selectedThreat, setSelectedThreat] = useState(null);
   const [deflecting, setDeflecting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [gameStarted, setGameStarted] = useState(threats.length > 0);
+  
+  // Update gameStarted when threats appear
+  React.useEffect(() => {
+    if (threats.length > 0) {
+      setGameStarted(true);
+    }
+  }, [threats.length]);
 
   const getThreatColor = (riskLevel) => {
     switch (riskLevel) {
@@ -79,8 +87,8 @@ const MapPanel = ({ gameState, events, threats }) => {
         setToast({
           type: 'success',
           message: {
-            title: '🎯 Asteroid Deflected!',
-            description: `${threat.title} has been successfully redirected. Earth is safe!`
+            title: result.fragmented ? '💥 Asteroid Fragmented!' : '🎯 Asteroid Destroyed!',
+            description: result.message
           }
         });
         setSelectedThreat(null);
@@ -108,6 +116,41 @@ const MapPanel = ({ gameState, events, threats }) => {
     }
   };
 
+  const handleImpact = async (threat) => {
+    try {
+      const result = await processAction({
+        type: 'asteroid_impact',
+        targetId: threat.id
+      });
+      
+      if (result && result.success) {
+        // Impact notification with damage info
+        setToast({
+          type: 'error',
+          message: {
+            title: '💥 IMPACT DETECTED!',
+            description: result.message
+          }
+        });
+        
+        // Check for game over
+        if (result.gameOver) {
+          setTimeout(() => {
+            setToast({
+              type: 'error',
+              message: {
+                title: '☠️ MISSION FAILED',
+                description: 'Earth\'s defenses have collapsed. Game Over.'
+              }
+            });
+          }, 3000);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to process impact:', error);
+    }
+  };
+
   return (
     <div className="bg-dark-gray rounded-xl border border-neon-blue/30 p-3 flex flex-col h-full">
       <div className="flex items-center justify-between mb-2">
@@ -125,6 +168,7 @@ const MapPanel = ({ gameState, events, threats }) => {
           threats={threats} 
           gameState={gameState}
           onDeflectAsteroid={handleDeflect}
+          onImpact={handleImpact}
           onUpgrade={handleUpgrade}
         />
 
@@ -132,10 +176,29 @@ const MapPanel = ({ gameState, events, threats }) => {
         <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-sm rounded-lg p-2 border border-neon-blue/30">
           <div className="text-xs font-mono space-y-0.5">
             <div className="text-neon-green">STATUS: OPERATIONAL</div>
-            <div className="text-gray-300">DAMAGE: {gameState.earthDamage}%</div>
+            <div className="text-gray-300">HEALTH: {gameState.earthHealth}%</div>
             <div className="text-neon-blue">REPUTATION: {gameState.reputation}</div>
           </div>
         </div>
+
+        {/* Start Game Button */}
+        {!gameStarted && threats.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <motion.button
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(0, 255, 136, 0.6)" }}
+              whileTap={{ scale: 0.95 }}
+              onClick={async () => {
+                await startGame();
+                setGameStarted(true);
+              }}
+              className="px-8 py-4 bg-neon-green hover:bg-green-500 text-black font-bold text-xl rounded-lg font-mono glow-green transition-all"
+            >
+              🚀 START MISSION
+            </motion.button>
+          </div>
+        )}
 
         {/* Controls hint */}
         <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm rounded px-2 py-1 text-xs text-gray-400 font-mono">
