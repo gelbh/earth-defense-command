@@ -1,25 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext';
+import Earth3D from './Earth3D';
 
 const MapPanel = ({ gameState, events, threats }) => {
-  const { getLatestEarthImage, processAction } = useGame();
-  const [earthImage, setEarthImage] = useState(null);
+  const { processAction } = useGame();
   const [selectedThreat, setSelectedThreat] = useState(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [deflecting, setDeflecting] = useState(false);
-
-  useEffect(() => {
-    // Only load image once
-    if (!imageLoaded) {
-      const loadEarthImage = async () => {
-        const image = await getLatestEarthImage();
-        setEarthImage(image);
-        setImageLoaded(true);
-      };
-      loadEarthImage();
-    }
-  }, [getLatestEarthImage, imageLoaded]);
 
   const getThreatColor = (riskLevel) => {
     switch (riskLevel) {
@@ -72,46 +59,22 @@ const MapPanel = ({ gameState, events, threats }) => {
         </div>
       </div>
 
-      {/* Earth Visualization */}
-      <div className="flex-1 relative bg-gradient-to-br from-blue-900 to-green-900 rounded-lg overflow-hidden mb-2 min-h-[200px]">
-        {earthImage ? (
-          <div className="relative h-full">
-            <img
-              src={earthImage.imageUrl}
-              alt="Earth from space"
-              className="w-full h-full object-cover opacity-80"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="text-6xl mb-4 animate-pulse">🌍</div>
-              <p className="text-neon-blue font-mono">Loading Earth...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Threat Markers */}
-        {threats.map((threat, index) => (
-          <motion.div
-            key={threat.id}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className={`absolute top-${20 + (index * 10)}% left-${30 + (index * 15)}% cursor-pointer`}
-            onClick={() => setSelectedThreat(threat)}
-          >
-            <div className={`w-4 h-4 rounded-full ${getThreatGlow(threat.severity)} ${getThreatColor(threat.severity)} bg-current animate-pulse`} />
-          </motion.div>
-        ))}
+      {/* 3D Earth Visualization */}
+      <div className="flex-1 relative rounded-lg overflow-hidden mb-2 min-h-[200px]">
+        <Earth3D threats={threats} />
 
         {/* Earth Status Overlay */}
-        <div className="absolute top-4 left-4 bg-black/70 rounded-lg p-3">
-          <div className="text-sm font-mono">
+        <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-sm rounded-lg p-2 border border-neon-blue/30">
+          <div className="text-xs font-mono space-y-0.5">
             <div className="text-neon-green">STATUS: OPERATIONAL</div>
             <div className="text-gray-300">DAMAGE: {gameState.earthDamage}%</div>
             <div className="text-neon-blue">REPUTATION: {gameState.reputation}</div>
           </div>
+        </div>
+
+        {/* Controls hint */}
+        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm rounded px-2 py-1 text-xs text-gray-400 font-mono">
+          🖱️ Drag to rotate • Scroll to zoom
         </div>
       </div>
 
