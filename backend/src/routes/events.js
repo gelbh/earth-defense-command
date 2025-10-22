@@ -5,7 +5,8 @@ import {
   processAction,
   purchaseUpgrade,
   advanceDay,
-  resetGame
+  resetGame,
+  getApiStatus
 } from '../controllers/eventsController.js';
 
 const router = express.Router();
@@ -13,6 +14,7 @@ const router = express.Router();
 // Game events and state routes
 router.get('/', getEvents);  // GET /api/events
 router.get('/state', getGameState);
+router.get('/api-status', getApiStatus); // NASA API status check
 router.post('/action', processAction);
 router.post('/upgrade', purchaseUpgrade);
 router.post('/advance-day', advanceDay);

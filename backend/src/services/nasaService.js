@@ -11,6 +11,10 @@ let neoCacheTimestamp = null;
 let epicCacheTimestamp = null;
 const CACHE_DURATION = 1000 * 60 * 10; // 10 minutes
 
+// Rate limit tracking
+let isRateLimited = false;
+let rateLimitResetTime = null;
+
 class NasaService {
   async getNEOData(startDate, endDate) {
     // Check cache first
@@ -95,15 +99,46 @@ class NasaService {
 
       return asteroids;
     } catch (error) {
-      // Silently handle rate limits - game will use simulated data
+      // Handle rate limits - game will use simulated data
       if (error.response?.status === 429) {
-        console.log("NASA API rate limit reached - using simulated data");
+        isRateLimited = true;
+        rateLimitResetTime = Date.now() + (60 * 60 * 1000); // Reset in 1 hour
+        console.log('⏳ NASA API rate limited. Resets at:', new Date(rateLimitResetTime).toLocaleTimeString());
+        console.log('✅ Using simulated asteroid data as fallback.');
       } else {
         console.error("Error fetching near Earth objects:", error.message);
       }
       // Throw error so game service knows to use simulated data
       throw new Error("Failed to fetch NEO data");
     }
+  }
+
+  // Check rate limit status and API info
+  getApiStatus() {
+    // Check if rate limit has expired
+    if (isRateLimited && rateLimitResetTime && Date.now() > rateLimitResetTime) {
+      isRateLimited = false;
+      rateLimitResetTime = null;
+      console.log('✅ NASA API rate limit has been reset.');
+    }
+    
+    return {
+      apiKey: NASA_API_KEY === 'DEMO_KEY' ? 'DEMO_KEY' : `Custom (${NASA_API_KEY.substring(0, 8)}...)`,
+      isRateLimited,
+      resetTime: rateLimitResetTime ? new Date(rateLimitResetTime).toLocaleString() : null,
+      cacheStatus: {
+        neo: {
+          cached: !!cachedNEOData,
+          valid: neoCacheTimestamp && (Date.now() - neoCacheTimestamp < CACHE_DURATION),
+          age: neoCacheTimestamp ? Math.floor((Date.now() - neoCacheTimestamp) / 1000) : null
+        },
+        epic: {
+          cached: !!cachedEPICData,
+          valid: epicCacheTimestamp && (Date.now() - epicCacheTimestamp < CACHE_DURATION),
+          age: epicCacheTimestamp ? Math.floor((Date.now() - epicCacheTimestamp) / 1000) : null
+        }
+      }
+    };
   }
 
   async getLatestEarthImage() {

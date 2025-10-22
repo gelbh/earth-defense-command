@@ -1,5 +1,5 @@
-import nasaService from '../services/nasaService.js';
 import gameService from '../services/gameService.js';
+import nasaService from '../services/nasaService.js';
 
 export const getEvents = async (req, res) => {
   try {
@@ -123,6 +123,26 @@ export const resetGame = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to reset game',
+      error: error.message
+    });
+  }
+};
+
+export const getApiStatus = async (req, res) => {
+  try {
+    const status = nasaService.getApiStatus();
+    res.json({
+      success: true,
+      status: status,
+      message: status.isRateLimited 
+        ? `NASA API is rate limited. Resets at ${status.resetTime}. Using simulated data.`
+        : 'NASA API is operational. Real data available.'
+    });
+  } catch (error) {
+    console.error('Error getting API status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get API status',
       error: error.message
     });
   }

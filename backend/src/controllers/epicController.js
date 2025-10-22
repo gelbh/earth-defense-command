@@ -1,4 +1,5 @@
 import nasaService from '../services/nasaService.js';
+import axios from 'axios';
 
 export const getLatestEarthImage = async (req, res) => {
   try {
@@ -11,9 +12,15 @@ export const getLatestEarthImage = async (req, res) => {
       });
     }
 
+    // Return proxied URL instead of direct NASA URL to avoid CORS
+    const proxiedImage = {
+      ...earthImage,
+      imageUrl: `/api/epic/proxy?url=${encodeURIComponent(earthImage.imageUrl)}`
+    };
+
     res.json({
       success: true,
-      image: earthImage
+      image: proxiedImage
     });
   } catch (error) {
     console.error('Error fetching Earth image:', error);
@@ -21,6 +28,39 @@ export const getLatestEarthImage = async (req, res) => {
       success: false,
       message: 'Failed to fetch Earth image',
       error: error.message
+    });
+  }
+};
+
+// CORS proxy for NASA images
+export const proxyImage = async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: 'URL parameter is required'
+      });
+    }
+
+    // Fetch the image from NASA
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      headers: {
+        'User-Agent': 'Earth-Defense-Command-Game/1.0'
+      }
+    });
+
+    // Set appropriate headers
+    res.set('Content-Type', response.headers['content-type'] || 'image/png');
+    res.set('Cache-Control', 'public, max-age=600'); // Cache for 10 minutes
+    res.send(response.data);
+  } catch (error) {
+    console.error('Error proxying image:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to proxy image'
     });
   }
 };

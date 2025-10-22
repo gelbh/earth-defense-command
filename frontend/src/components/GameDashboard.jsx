@@ -12,8 +12,18 @@ import TutorialModal from './TutorialModal';
 const GameDashboard = () => {
   const { gameState, loading, error, generateEvents, resetGame } = useGame();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(() => {
+    // Check if user has seen the tutorial before
+    const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
+    return !hasSeenTutorial; // Show only if NOT seen before
+  });
   const [events, setEvents] = useState([]);
+
+  // Handle tutorial close and mark as seen
+  const handleTutorialClose = () => {
+    localStorage.setItem('hasSeenTutorial', 'true');
+    setShowTutorial(false);
+  };
 
   // Initial event generation only
   useEffect(() => {
@@ -59,7 +69,7 @@ const GameDashboard = () => {
     <div className="h-screen flex flex-col bg-space-blue overflow-hidden">
       {/* Resource HUD */}
       <div className="flex-shrink-0">
-        <ResourceHUD gameState={gameState} onHelpClick={() => setShowTutorial(true)} />
+        <ResourceHUD gameState={gameState} onHelpClick={() => setShowTutorial(true)} /> {/* Help button always works */}
       </div>
       
       {/* Main Game Area */}
@@ -87,7 +97,7 @@ const GameDashboard = () => {
 
       {/* Tutorial Modal */}
       {showTutorial && (
-        <TutorialModal onClose={() => setShowTutorial(false)} />
+        <TutorialModal onClose={handleTutorialClose} />
       )}
 
       {/* Upgrade Modal */}
