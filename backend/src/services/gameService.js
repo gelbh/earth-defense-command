@@ -636,7 +636,11 @@ class GameService {
     // Apply upgrade effects
     switch (upgradeType) {
       case 'aiTracking':
-        this.gameState.satellites += 1;
+        // Deploy a new advanced satellite
+        const newSat = this.createSatellite(this.gameState.satellites.length);
+        newSat.level = 2; // AI tracking satellites start at level 2
+        newSat.detectionRadius = 4.5; // Better detection
+        this.gameState.satellites.push(newSat);
         break;
       case 'improvedRadar':
         this.gameState.power += 20;
@@ -719,7 +723,7 @@ class GameService {
     // Satellites and orbital probes stay deployed - they don't replenish
     // But available probe missions restore
     this.gameState.availableProbes = Math.min(
-      this.gameState.probes, // Can't have more available than deployed
+      this.gameState.probes.length, // Can't have more available than deployed
       this.gameState.availableProbes + 1
     );
     
@@ -748,8 +752,9 @@ class GameService {
       score: 0,
       funds: 1000000,
       power: 100,
-      satellites: 3,
-      probes: 2,
+      satellites: [], // Array of deployed satellites with properties
+      probes: [], // Array of deployed probes with properties
+      availableProbes: 2, // Probes available for deflection missions
       researchTeams: 1,
       upgrades: {
         aiTracking: false,
@@ -762,6 +767,17 @@ class GameService {
       earthDamage: 0,
       reputation: 100
     };
+    
+    // Initialize starting satellites with detection capabilities
+    this.gameState.satellites = [
+      this.createSatellite(0),
+      this.createSatellite(1)
+    ];
+    
+    // Initialize starting probes
+    this.gameState.probes = [
+      this.createProbe(0)
+    ];
     
     // Generate initial events for the new game
     await this.generateEvents();
