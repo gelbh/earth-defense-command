@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext';
 
 const ActionButtons = ({ gameState, onUpgradeClick }) => {
-  const { processAction, advanceDay, resetGame } = useGame();
+  const { processAction, resetGame } = useGame();
   const [loading, setLoading] = useState(false);
   const [lastAction, setLastAction] = useState(null);
 
@@ -26,17 +26,6 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
       }
     } catch (error) {
       console.error('Action failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdvanceDay = async () => {
-    setLoading(true);
-    try {
-      await advanceDay();
-    } catch (error) {
-      console.error('Failed to advance day:', error);
     } finally {
       setLoading(false);
     }
@@ -99,18 +88,12 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
           <div className="text-xs text-gray-700">$200K</div>
         </motion.button>
 
-        {/* Vertical Separator + Advance Day */}
-        <motion.button
-          variants={buttonVariants}
-          whileHover="hover"
-          whileTap="tap"
-          onClick={handleAdvanceDay}
-          disabled={loading}
-          className="p-1.5 rounded font-mono text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white transition-all disabled:opacity-50 border-l-2 border-orange-400"
-        >
-          <div className="text-sm">⏭️</div>
-          <div className="text-xs leading-tight">Advance Day</div>
-        </motion.button>
+        {/* Info/Status Display */}
+        <div className="p-1.5 rounded font-mono text-xs font-bold bg-gray-700 text-gray-300 border-l-2 border-gray-500 flex flex-col items-center justify-center">
+          <div className="text-sm">📊</div>
+          <div className="text-xs leading-tight">Day {gameState.day}</div>
+          <div className="text-xs text-gray-400">Level</div>
+        </div>
 
         {/* Second Row */}
         <motion.button

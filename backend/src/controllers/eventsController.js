@@ -21,6 +21,12 @@ export const getEvents = async (req, res) => {
 
 export const getGameState = async (req, res) => {
   try {
+    // Generate initial events if there are none
+    const currentState = gameService.getGameState();
+    if (currentState.threats.length === 0 && currentState.events.length === 0) {
+      await gameService.generateEvents();
+    }
+    
     const gameState = gameService.getGameState();
     res.json({
       success: true,

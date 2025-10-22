@@ -199,70 +199,92 @@ function BurnupEffect({ position, intensity = 1 }) {
 function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
   const markerRef = useRef();
   const [hovered, setHovered] = useState(false);
+  const [burnedUp, setBurnedUp] = useState(false);
+  const [showBurnup, setShowBurnup] = useState(false);
   
-  // Approach mechanics from threat data
-  const approachAngle = threat.data?.approachAngle || (index * Math.PI * 2) / 5;
-  const velocity = parseFloat(threat.data?.velocity) || 10;
-  const timeToImpact = threat.data?.timeToImpact || 5; // minutes
-  const detectedAt = threat.data?.detectedAt || Date.now();
+  // Timestamp-based animation
+  const startTimeRef = useRef(Date.now());
+  const pausedTimeRef = useRef(0);
+  const pauseStartRef = useRef(null);
   
-  // Calculate current distance based on time elapsed
-  // Start far away, move toward Earth over time
-  const startDistance = 8; // Start far from Earth
-  const earthRadius = 2; // Earth sphere radius
+  // Approach mechanics from threat data - memoize to prevent recalculation on re-render
+  const approachAngle = useMemo(() => threat.data?.approachAngle || (index * Math.PI * 2) / 5, [threat.data?.approachAngle, index]);
+  const polarAngle = useMemo(() => 
+    threat.data?.polarAngle !== undefined ? threat.data.polarAngle : (Math.random() - 0.5) * Math.PI,
+    [threat.data?.polarAngle]
+  );
+  const velocity = parseFloat(threat.data?.velocity) || 10; // km/s
+  const diameter = parseFloat(threat.data?.diameter) || 50; // meters
+  const initialDistance = parseFloat(threat.data?.distance) || 1000000; // km
   
-  // Track position for when paused
-  const pausedPosition = useRef({ x: 0, y: 0, z: 0 });
-  const pausedTime = useRef(0);
+  // Game units conversion: 1 game unit = ~200,000 km
+  const GAME_UNIT_KM = 200000;
+  const startDistance = initialDistance / GAME_UNIT_KM; // Convert to game units
+  const earthRadius = 2; // Earth sphere radius in game units
+  const atmosphereRadius = 2.1; // Atmosphere extends slightly beyond Earth
   
-  useFrame(({ clock }) => {
-    if (markerRef.current) {
-      // Pause if game is paused OR asteroid is hovered
-      const shouldPause = isPaused || hovered;
-      
-      // Use delta time to increment game time only when not paused
-      if (!shouldPause) {
-        pausedTime.current += clock.getDelta();
+  // Initialize timing
+  React.useEffect(() => {
+    startTimeRef.current = Date.now();
+    pausedTimeRef.current = 0;
+    pauseStartRef.current = isPaused ? Date.now() : null;
+  }, [threat.id]);
+  
+  // Track pause state
+  React.useEffect(() => {
+    if (isPaused && pauseStartRef.current === null) {
+      pauseStartRef.current = Date.now();
+    } else if (!isPaused && pauseStartRef.current !== null) {
+      pausedTimeRef.current += (Date.now() - pauseStartRef.current);
+      pauseStartRef.current = null;
+    }
+  }, [isPaused]);
+  
+  useFrame(() => {
+    if (markerRef.current && !burnedUp) {
+      // Calculate elapsed game time (excluding paused time)
+      let currentPausedTime = pausedTimeRef.current;
+      if ((isPaused || hovered) && pauseStartRef.current !== null) {
+        currentPausedTime += (Date.now() - pauseStartRef.current);
       }
       
-      // Time since detection (seconds)
-      const elapsedSeconds = pausedTime.current;
-      const elapsedMinutes = elapsedSeconds / 60;
+      const elapsedSeconds = (Date.now() - startTimeRef.current - currentPausedTime) / 1000;
       
-      // Calculate progress: 0 (far) to 1 (Earth)
-      const progress = Math.min(1, elapsedMinutes / Math.max(0.1, timeToImpact));
-      
-      // Linear approach toward Earth
-      const currentDistance = startDistance - (startDistance - earthRadius) * progress;
+      // Calculate distance traveled using real velocity
+      // Distance = velocity * time (scaled for gameplay: 1 real second = 1000 game seconds)
+      const timeScale = 1000; // Speed up asteroid movement for gameplay
+      const distanceTraveled = (velocity * elapsedSeconds * timeScale) / GAME_UNIT_KM;
+      const currentDistance = Math.max(earthRadius, startDistance - distanceTraveled);
       
       // Position using 3D SPHERICAL COORDINATES
-      // Get polar angle from data or generate from index
-      const polar = threat.data?.polarAngle !== undefined ? threat.data.polarAngle : (Math.random() - 0.5) * Math.PI;
+      const x = Math.cos(approachAngle) * Math.cos(polarAngle) * currentDistance;
+      const y = Math.sin(polarAngle) * currentDistance;
+      const z = Math.sin(approachAngle) * Math.cos(polarAngle) * currentDistance;
       
-      // Convert spherical (r, azimuth, polar) to Cartesian (x, y, z)
-      const x = Math.cos(approachAngle) * Math.cos(polar) * currentDistance;
-      const y = Math.sin(polar) * currentDistance;
-      const z = Math.sin(approachAngle) * Math.cos(polar) * currentDistance;
+      markerRef.current.position.set(x, y, z);
       
-      markerRef.current.position.x = x;
-      markerRef.current.position.z = z;
-      markerRef.current.position.y = y;
-      
-      // Save position for when we pause
-      pausedPosition.current = { x, y, z };
-      
-      // Rotation speed based on hover
+      // Rotation
       const rotationSpeed = hovered ? 0.001 : 0.01;
       markerRef.current.rotation.x += rotationSpeed;
       markerRef.current.rotation.y += rotationSpeed * 0.5;
       
+      // Check for atmospheric burnup (small asteroids burn up < 25m diameter)
+      if (currentDistance <= atmosphereRadius && diameter < 25) {
+        setShowBurnup(true);
+        setTimeout(() => {
+          setBurnedUp(true);
+        }, 2000); // Show burnup effect for 2 seconds
+      }
+      
       // Check if asteroid reached Earth (impact!)
-      if (progress >= 1 && !hovered) {
-        // TODO: Trigger impact event
-        console.warn(`Asteroid ${threat.title} IMPACT!`);
+      if (currentDistance <= earthRadius && !hovered && diameter >= 25) {
+        console.warn(`Asteroid ${threat.title} IMPACT! Damage incoming...`);
       }
     }
   });
+  
+  // Don't render if burned up
+  if (burnedUp) return null;
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -347,21 +369,6 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
         </>
       )}
       
-      {/* Countdown Timer (always visible) */}
-      <Html distanceFactor={20} position={[0, getSize() * 2.5, 0]}>
-        <div className="bg-black/80 px-1 py-0.5 rounded border border-neon-red font-mono font-bold whitespace-nowrap pointer-events-none text-center" style={{ fontSize: '8px' }}>
-          <div className="text-neon-red">
-            ⏱️ {(() => {
-              const elapsedMinutes = (pausedTime.current || 0) / 60;
-              const remainingMinutes = Math.max(0, timeToImpact - elapsedMinutes);
-              const mins = Math.floor(remainingMinutes);
-              const secs = Math.floor((remainingMinutes - mins) * 60);
-              return `${mins}:${secs.toString().padStart(2, '0')}`;
-            })()}
-          </div>
-        </div>
-      </Html>
-      
       {/* Trajectory line showing path to Earth */}
       <line>
         <bufferGeometry>
@@ -380,6 +387,14 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
         <lineBasicMaterial color={getColor()} transparent opacity={0.3} linewidth={2} />
       </line>
       
+      {/* Atmospheric Burnup Effect */}
+      {showBurnup && (
+        <BurnupEffect 
+          position={markerRef.current ? [markerRef.current.position.x, markerRef.current.position.y, markerRef.current.position.z] : [0, 0, 0]} 
+          intensity={diameter / 25} 
+        />
+      )}
+      
       {/* Tooltip on hover */}
       {hovered && (
         <Html 
@@ -390,12 +405,18 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
             pointerEvents: 'none'
           }}
         >
-          <div className="bg-black/95 text-white px-1.5 py-0.5 rounded border border-neon-red font-mono shadow-lg" style={{ fontSize: '8px', maxWidth: '100px' }}>
+          <div className="bg-black/95 text-white px-1.5 py-0.5 rounded border border-neon-red font-mono shadow-lg" style={{ fontSize: '8px', maxWidth: '140px' }}>
             <div className="font-bold text-neon-red mb-0.5 truncate" style={{ fontSize: '9px' }}>⚠️ {threat.data?.name || threat.title}</div>
             <div className="text-orange-400" style={{ fontSize: '7px' }}>{threat.severity.toUpperCase()}</div>
-            {threat.data?.diameter && <div className="text-gray-300" style={{ fontSize: '7px' }}>{Math.round(threat.data.diameter)}m</div>}
+            {diameter && <div className="text-gray-300" style={{ fontSize: '7px' }}>Ø {Math.round(diameter)}m</div>}
+            {velocity && <div className="text-blue-400" style={{ fontSize: '7px' }}>🚀 {velocity.toFixed(1)} km/s</div>}
+            {diameter < 25 && (
+              <div className="text-yellow-400 mt-0.5 pt-0.5 border-t border-gray-700" style={{ fontSize: '7px' }}>
+                🔥 Will burn up in atmosphere
+              </div>
+            )}
             <div className="text-neon-green mt-0.5 text-center border-t border-gray-700 pt-0.5" style={{ fontSize: '8px' }}>
-              🎯 CLICK
+              🎯 CLICK TO DEFLECT
             </div>
           </div>
         </Html>
@@ -998,18 +1019,28 @@ const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onU
   const calculateAsteroidPosition = (threat) => {
     if (!threat?.data) return [0, 0, 0];
     
-    const { approachAngle = 0, distance = 1000000, timeToImpact = 24, detectedAt = 0 } = threat.data;
-    const elapsedMinutes = (gameState?.day || 0) * 1440;
-    const minutesSinceDetection = Math.max(0, elapsedMinutes - detectedAt);
-    const progress = minutesSinceDetection / timeToImpact;
-    const currentDistance = distance * (1 - progress);
-    const distanceInGameUnits = currentDistance / 100000;
+    const approachAngle = threat.data?.approachAngle || 0;
+    const polarAngle = threat.data?.polarAngle || 0;
+    const velocity = parseFloat(threat.data?.velocity) || 10; // km/s
+    const initialDistance = parseFloat(threat.data?.distance) || 1000000; // km
     
-    return [
-      Math.cos(approachAngle) * distanceInGameUnits,
-      Math.sin(approachAngle * 0.5) * distanceInGameUnits * 0.3,
-      Math.sin(approachAngle) * distanceInGameUnits
-    ];
+    // Match the AsteroidMarker calculation
+    const GAME_UNIT_KM = 200000;
+    const startDistance = initialDistance / GAME_UNIT_KM;
+    const earthRadius = 2;
+    
+    // Estimate current position (rough approximation for laser targeting)
+    // In a real scenario, we'd track actual elapsed time, but this is close enough for visual effect
+    const estimatedProgress = 0.3; // Assume asteroid is ~30% along its path when clicked
+    const estimatedDistance = startDistance * (1 - estimatedProgress);
+    const currentDistance = Math.max(earthRadius, estimatedDistance);
+    
+    // Position using 3D SPHERICAL COORDINATES (same as AsteroidMarker)
+    const x = Math.cos(approachAngle) * Math.cos(polarAngle) * currentDistance;
+    const y = Math.sin(polarAngle) * currentDistance;
+    const z = Math.sin(approachAngle) * Math.cos(polarAngle) * currentDistance;
+    
+    return [x, y, z];
   };
   
   // Helper to find nearest probe

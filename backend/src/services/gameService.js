@@ -145,7 +145,7 @@ class GameService {
   // Generate simulated asteroid events with approach mechanics
   generateSimulatedAsteroidEvents() {
     const events = [];
-    const numAsteroids = Math.floor(Math.random() * 3) + 1; // 1-3 asteroids
+    const numAsteroids = Math.floor(Math.random() * 2) + 1; // 1-2 asteroids
     
     for (let i = 0; i < numAsteroids; i++) {
       const diameter = Math.floor(Math.random() * 500) + 50; // 50-550m
