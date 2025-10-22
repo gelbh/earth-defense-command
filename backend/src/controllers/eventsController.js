@@ -113,7 +113,7 @@ export const advanceDay = async (req, res) => {
 
 export const resetGame = async (req, res) => {
   try {
-    const gameState = gameService.resetGame();
+    const gameState = await gameService.resetGame();
     res.json({
       success: true,
       gameState: gameState

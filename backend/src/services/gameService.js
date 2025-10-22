@@ -382,7 +382,7 @@ class GameService {
   }
 
   // Reset game
-  resetGame() {
+  async resetGame() {
     this.gameState = {
       day: 1,
       score: 0,
@@ -402,6 +402,9 @@ class GameService {
       earthDamage: 0,
       reputation: 100
     };
+    
+    // Generate initial events for the new game
+    await this.generateEvents();
     
     return this.gameState;
   }

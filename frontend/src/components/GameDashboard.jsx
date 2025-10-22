@@ -9,7 +9,7 @@ import ActionButtons from './ActionButtons';
 import UpgradeModal from './UpgradeModal';
 
 const GameDashboard = () => {
-  const { gameState, loading, error, generateEvents } = useGame();
+  const { gameState, loading, error, generateEvents, resetGame } = useGame();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [events, setEvents] = useState([]);
 
@@ -104,7 +104,13 @@ const GameDashboard = () => {
             <p className="text-xl text-white mb-6">Earth has sustained too much damage</p>
             <p className="text-lg text-gray-300 mb-8">Final Score: {gameState.score}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={async () => {
+                await resetGame();
+                const newEvents = await generateEvents();
+                if (newEvents && newEvents.length > 0) {
+                  setEvents(newEvents);
+                }
+              }}
               className="bg-neon-blue hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors"
             >
               Restart Mission
