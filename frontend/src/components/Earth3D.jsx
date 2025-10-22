@@ -8,9 +8,9 @@ function Earth({ isPaused = false }) {
   const earthRef = useRef();
   
   // Rotate Earth continuously
-  useFrame(() => {
+  useFrame(({ clock }) => {
     if (earthRef.current && !isPaused) {
-      earthRef.current.rotation.y += 0.002; // Slow rotation
+      earthRef.current.rotation.y += clock.getDelta() * 0.3; // Slow rotation (0.3 rad/sec)
     }
   });
 
@@ -219,14 +219,14 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
     if (markerRef.current) {
       // Pause if game is paused OR asteroid is hovered
       const shouldPause = isPaused || hovered;
-      const currentTime = shouldPause ? pausedTime.current : clock.getElapsedTime();
       
+      // Use delta time to increment game time only when not paused
       if (!shouldPause) {
-        pausedTime.current = currentTime;
+        pausedTime.current += clock.getDelta();
       }
       
       // Time since detection (seconds)
-      const elapsedSeconds = currentTime;
+      const elapsedSeconds = pausedTime.current;
       const elapsedMinutes = elapsedSeconds / 60;
       
       // Calculate progress: 0 (far) to 1 (Earth)
@@ -348,11 +348,11 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
       )}
       
       {/* Countdown Timer (always visible) */}
-      <Html distanceFactor={10} position={[0, getSize() * 2.5, 0]}>
-        <div className="bg-black/80 px-2 py-1 rounded border border-neon-red text-xs font-mono font-bold whitespace-nowrap pointer-events-none text-center">
+      <Html distanceFactor={20} position={[0, getSize() * 2.5, 0]}>
+        <div className="bg-black/80 px-1 py-0.5 rounded border border-neon-red font-mono font-bold whitespace-nowrap pointer-events-none text-center" style={{ fontSize: '8px' }}>
           <div className="text-neon-red">
             ⏱️ {(() => {
-              const elapsedMinutes = (useRef(0).current || 0) / 60;
+              const elapsedMinutes = (pausedTime.current || 0) / 60;
               const remainingMinutes = Math.max(0, timeToImpact - elapsedMinutes);
               const mins = Math.floor(remainingMinutes);
               const secs = Math.floor((remainingMinutes - mins) * 60);
@@ -382,15 +382,20 @@ function AsteroidMarker({ threat, index, onDeflect, isPaused = false }) {
       
       {/* Tooltip on hover */}
       {hovered && (
-        <Html distanceFactor={10}>
-          <div className="bg-black/95 text-white px-3 py-2 rounded-lg border-2 border-neon-red text-xs font-mono whitespace-nowrap pointer-events-none shadow-2xl">
-            <div className="font-bold text-neon-red text-sm mb-1">⚠️ {threat.title}</div>
-            <div className="text-orange-400">Risk: {threat.severity.toUpperCase()}</div>
-            {threat.data?.diameter && <div className="text-gray-300">Size: {Math.round(threat.data.diameter)}m</div>}
-            {threat.data?.velocity && <div className="text-gray-300">Speed: {Math.round(threat.data.velocity)} km/s</div>}
-            {threat.data?.distance && <div className="text-gray-400">Distance: {Math.round(threat.data.distance / 1000)}k km</div>}
-            <div className="text-neon-green mt-2 text-center font-bold border-t border-gray-600 pt-1">
-              🎯 CLICK TO DEFLECT
+        <Html 
+          distanceFactor={15}
+          position={[getSize() * 3, 0, 0]}
+          style={{
+            transform: 'translate(10px, -50%)',
+            pointerEvents: 'none'
+          }}
+        >
+          <div className="bg-black/95 text-white px-1.5 py-0.5 rounded border border-neon-red font-mono shadow-lg" style={{ fontSize: '8px', maxWidth: '100px' }}>
+            <div className="font-bold text-neon-red mb-0.5 truncate" style={{ fontSize: '9px' }}>⚠️ {threat.data?.name || threat.title}</div>
+            <div className="text-orange-400" style={{ fontSize: '7px' }}>{threat.severity.toUpperCase()}</div>
+            {threat.data?.diameter && <div className="text-gray-300" style={{ fontSize: '7px' }}>{Math.round(threat.data.diameter)}m</div>}
+            <div className="text-neon-green mt-0.5 text-center border-t border-gray-700 pt-0.5" style={{ fontSize: '8px' }}>
+              🎯 CLICK
             </div>
           </div>
         </Html>
@@ -448,8 +453,33 @@ function Satellite({ satellite, index, onUpgrade, isPaused = false }) {
   const satelliteRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
+  
+  // Use timestamp-based animation instead of accumulating delta
+  const startTimeRef = useRef(Date.now());
+  const pausedTimeRef = useRef(0); // Total time spent paused
+  const pauseStartRef = useRef(null); // When current pause started
+  
   const radius = 2.5; // Close orbit for satellites
   const speed = 0.8;
+  
+  // Initialize timing on mount
+  React.useEffect(() => {
+    startTimeRef.current = Date.now();
+    pausedTimeRef.current = 0;
+    pauseStartRef.current = isPaused ? Date.now() : null;
+  }, [satellite?.id]);
+  
+  // Track pause state changes
+  React.useEffect(() => {
+    if (isPaused && pauseStartRef.current === null) {
+      // Just paused
+      pauseStartRef.current = Date.now();
+    } else if (!isPaused && pauseStartRef.current !== null) {
+      // Just unpaused
+      pausedTimeRef.current += (Date.now() - pauseStartRef.current);
+      pauseStartRef.current = null;
+    }
+  }, [isPaused]);
   
   // Use satellite's orbit position or calculate from index
   const orbitPosition = satellite?.orbitPosition || (index * Math.PI * 2) / 3;
@@ -465,13 +495,21 @@ function Satellite({ satellite, index, onUpgrade, isPaused = false }) {
     setUpgrading(false);
   };
   
-  useFrame(({ clock }) => {
-    if (satelliteRef.current && !isPaused) {
-      const t = clock.getElapsedTime() * speed + orbitPosition;
+  useFrame(() => {
+    if (satelliteRef.current) {
+      // Calculate elapsed game time (excluding paused time)
+      let currentPausedTime = pausedTimeRef.current;
+      if (isPaused && pauseStartRef.current !== null) {
+        currentPausedTime += (Date.now() - pauseStartRef.current);
+      }
+      
+      const elapsedTime = (Date.now() - startTimeRef.current - currentPausedTime) / 1000;
+      
+      // Calculate position based on elapsed time
+      const t = elapsedTime * speed + orbitPosition;
       satelliteRef.current.position.x = Math.cos(t) * radius;
       satelliteRef.current.position.z = Math.sin(t) * radius;
       satelliteRef.current.position.y = Math.sin(t * 2) * 0.2;
-      // Rotate satellite
       satelliteRef.current.rotation.y = t;
     }
   });
@@ -507,22 +545,20 @@ function Satellite({ satellite, index, onUpgrade, isPaused = false }) {
       
       {/* Tooltip */}
       {hovered && (
-        <Html distanceFactor={10}>
-          <div className="bg-black/95 text-white px-3 py-2 rounded-lg border-2 border-neon-blue text-xs font-mono whitespace-nowrap pointer-events-none shadow-2xl">
-            <div className="font-bold text-neon-blue text-sm mb-1">🛰️ Satellite Level {level}/3</div>
-            <div className="text-gray-300">Detection Radius: {detectionRadius.toFixed(1)} units</div>
-            <div className="text-gray-400">Status: {upgrading ? 'Upgrading...' : 'Operational'}</div>
+        <Html 
+          distanceFactor={15}
+          position={[0, 0.3, 0]}
+          style={{
+            transform: 'translate(-50%, -120%)',
+            pointerEvents: 'none'
+          }}
+        >
+          <div className="bg-black/95 text-white px-1.5 py-0.5 rounded border border-neon-blue font-mono shadow-lg" style={{ fontSize: '9px', maxWidth: '120px' }}>
+            <div className="font-bold text-neon-blue mb-0.5" style={{ fontSize: '10px' }}>🛰️ Lv{level}</div>
+            <div className="text-gray-300" style={{ fontSize: '8px' }}>R: {detectionRadius.toFixed(1)}</div>
             {level < 3 && (
-              <div className="mt-2 border-t border-gray-600 pt-1">
-                <div className="text-neon-green text-center font-bold">🖱️ Click to upgrade</div>
-                <div className="text-yellow-400 text-center">
-                  Cost: ${level * 100}K → Radius: {(detectionRadius + 1).toFixed(1)}
-                </div>
-              </div>
-            )}
-            {level >= 3 && (
-              <div className="text-green-400 mt-2 border-t border-gray-600 pt-1 text-center">
-                ⭐ MAX LEVEL
+              <div className="mt-0.5 border-t border-gray-700 pt-0.5 text-center">
+                <div className="text-yellow-400" style={{ fontSize: '7px' }}>${level * 100}K</div>
               </div>
             )}
           </div>
@@ -643,8 +679,33 @@ function Probe({ probe, index, onUpgrade, isPaused = false }) {
   const probeRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
+  
+  // Use timestamp-based animation instead of accumulating delta
+  const startTimeRef = useRef(Date.now());
+  const pausedTimeRef = useRef(0); // Total time spent paused
+  const pauseStartRef = useRef(null); // When current pause started
+  
   const radius = 2.8;
   const speed = 0.6;
+  
+  // Initialize timing on mount
+  React.useEffect(() => {
+    startTimeRef.current = Date.now();
+    pausedTimeRef.current = 0;
+    pauseStartRef.current = isPaused ? Date.now() : null;
+  }, [probe?.id]);
+  
+  // Track pause state changes
+  React.useEffect(() => {
+    if (isPaused && pauseStartRef.current === null) {
+      // Just paused
+      pauseStartRef.current = Date.now();
+    } else if (!isPaused && pauseStartRef.current !== null) {
+      // Just unpaused
+      pausedTimeRef.current += (Date.now() - pauseStartRef.current);
+      pauseStartRef.current = null;
+    }
+  }, [isPaused]);
   
   // Use probe's orbit position or calculate from index
   const orbitPosition = probe?.orbitPosition || (index * Math.PI * 2) / 3 + Math.PI;
@@ -660,13 +721,21 @@ function Probe({ probe, index, onUpgrade, isPaused = false }) {
     setUpgrading(false);
   };
   
-  useFrame(({ clock }) => {
-    if (probeRef.current && !isPaused) {
-      const t = clock.getElapsedTime() * speed + orbitPosition;
+  useFrame(() => {
+    if (probeRef.current) {
+      // Calculate elapsed game time (excluding paused time)
+      let currentPausedTime = pausedTimeRef.current;
+      if (isPaused && pauseStartRef.current !== null) {
+        currentPausedTime += (Date.now() - pauseStartRef.current);
+      }
+      
+      const elapsedTime = (Date.now() - startTimeRef.current - currentPausedTime) / 1000;
+      
+      // Calculate position based on elapsed time
+      const t = elapsedTime * speed + orbitPosition;
       probeRef.current.position.x = Math.cos(t) * radius;
       probeRef.current.position.z = Math.sin(t) * radius;
       probeRef.current.position.y = Math.cos(t * 1.5) * 0.3;
-      // Point probe in direction of travel
       probeRef.current.rotation.y = t + Math.PI / 2;
     }
   });
@@ -675,22 +744,20 @@ function Probe({ probe, index, onUpgrade, isPaused = false }) {
     <group ref={probeRef}>
       {/* Tooltip */}
       {hovered && (
-        <Html distanceFactor={10}>
-          <div className="bg-black/95 text-white px-3 py-2 rounded-lg border-2 border-neon-green text-xs font-mono whitespace-nowrap pointer-events-none shadow-2xl">
-            <div className="font-bold text-neon-green text-sm mb-1">🚀 Probe Level {level}/3</div>
-            <div className="text-gray-300">Laser Power: {laserPower}%</div>
-            <div className="text-gray-400">Status: {upgrading ? 'Upgrading...' : 'Armed'}</div>
+        <Html 
+          distanceFactor={15}
+          position={[0, 0.3, 0]}
+          style={{
+            transform: 'translate(-50%, -120%)',
+            pointerEvents: 'none'
+          }}
+        >
+          <div className="bg-black/95 text-white px-1.5 py-0.5 rounded border border-neon-green font-mono shadow-lg" style={{ fontSize: '9px', maxWidth: '120px' }}>
+            <div className="font-bold text-neon-green mb-0.5" style={{ fontSize: '10px' }}>🚀 Lv{level}</div>
+            <div className="text-gray-300" style={{ fontSize: '8px' }}>⚡{laserPower}%</div>
             {level < 3 && (
-              <div className="mt-2 border-t border-gray-600 pt-1">
-                <div className="text-neon-green text-center font-bold">🖱️ Click to upgrade</div>
-                <div className="text-yellow-400 text-center">
-                  Cost: ${level * 150}K → Power: {laserPower + 50}%
-                </div>
-              </div>
-            )}
-            {level >= 3 && (
-              <div className="text-green-400 mt-2 border-t border-gray-600 pt-1 text-center">
-                ⭐ MAX LEVEL
+              <div className="mt-0.5 border-t border-gray-700 pt-0.5 text-center">
+                <div className="text-yellow-400" style={{ fontSize: '7px' }}>${level * 150}K</div>
               </div>
             )}
           </div>
@@ -788,7 +855,7 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers 
         factor={4}
         saturation={0}
         fade
-        speed={1}
+        speed={isPaused ? 0 : 1}
       />
       
       {/* Earth with NASA Blue Marble texture */}
@@ -872,7 +939,7 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers 
         enableZoom={true}
         minDistance={4}
         maxDistance={12}
-        autoRotate
+        autoRotate={false}
         autoRotateSpeed={0.5}
       />
     </>
