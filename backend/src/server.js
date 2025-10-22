@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import exoplanetRoutes from './routes/exoplanetRoutes.js';
+import eventRoutes from './routes/events.js';
+import neoRoutes from './routes/neo.js';
+import epicRoutes from './routes/epic.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -15,10 +17,22 @@ app.use(express.json());
 
 // Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
+  res.json({ 
+    status: 'ok', 
+    message: 'Earth Defense Command API is running',
+    version: '1.0.0',
+    endpoints: {
+      events: '/api/events',
+      neo: '/api/neo',
+      epic: '/api/epic'
+    }
+  });
 });
 
-app.use('/api', exoplanetRoutes);
+// Game API routes
+app.use('/api/events', eventRoutes);
+app.use('/api/neo', neoRoutes);
+app.use('/api/epic', epicRoutes);
 
 // Error handling
 app.use(notFound);
