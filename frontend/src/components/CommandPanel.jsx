@@ -6,10 +6,10 @@ const CommandPanel = ({ children }) => {
     <motion.div
       initial={{ x: 100, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className="bg-dark-gray rounded-2xl border border-neon-blue/30 p-4 h-full flex flex-col"
+      className="bg-dark-gray rounded-xl border border-neon-blue/30 p-3 h-full flex flex-col"
     >
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-neon-blue font-mono">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-bold text-neon-blue font-mono">
           🎮 COMMAND CENTER
         </h2>
         <div className="text-xs text-gray-400 font-mono">
@@ -17,7 +17,7 @@ const CommandPanel = ({ children }) => {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col space-y-4">
+      <div className="flex-1 flex flex-col space-y-2 overflow-hidden">
         {children}
       </div>
     </motion.div>

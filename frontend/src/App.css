@@ -1,17 +1,19 @@
 .App {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: #0B1426;
   color: #ffffff;
+  overflow: hidden;
 }
 
 .App-header {
   background: linear-gradient(135deg, #0B1426 0%, #1A1A1A 100%);
-  padding: 1.5rem 2rem;
+  padding: 0.5rem 1.5rem;
   text-align: center;
   border-bottom: 2px solid #00D4FF;
   box-shadow: 0 4px 20px rgba(0, 212, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .header-content {
@@ -20,43 +22,45 @@
 }
 
 .game-title {
-  font-size: 2.5rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
   color: #00D4FF;
   text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .title-icon {
-  font-size: 3rem;
+  font-size: 1.75rem;
   animation: float 6s ease-in-out infinite;
 }
 
 .game-subtitle {
-  font-size: 1.1rem;
+  font-size: 0.75rem;
   color: #ffffff;
-  opacity: 0.8;
+  opacity: 0.7;
   font-family: 'JetBrains Mono', monospace;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .App-main {
   flex: 1;
   padding: 0;
   overflow: hidden;
+  min-height: 0;
 }
 
 .App-footer {
   background: #1A1A1A;
-  padding: 1rem 2rem;
+  padding: 0.35rem 1.5rem;
   text-align: center;
   border-top: 1px solid #2D2D2D;
   color: #888;
-  font-size: 0.9rem;
+  font-size: 0.7rem;
+  flex-shrink: 0;
 }
 
 .App-footer p {

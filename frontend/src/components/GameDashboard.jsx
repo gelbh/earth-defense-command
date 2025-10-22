@@ -13,22 +13,16 @@ const GameDashboard = () => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [events, setEvents] = useState([]);
 
-  // Generate events periodically
+  // Initial event generation only
   useEffect(() => {
-    const interval = setInterval(async () => {
+    const loadInitialEvents = async () => {
       const newEvents = await generateEvents();
       if (newEvents && newEvents.length > 0) {
-        setEvents(prev => [...newEvents, ...prev].slice(0, 20)); // Keep last 20 events
+        setEvents(newEvents);
       }
-    }, 10000); // Every 10 seconds
-
-    return () => clearInterval(interval);
-  }, [generateEvents]);
-
-  // Initial event generation
-  useEffect(() => {
-    generateEvents();
-  }, [generateEvents]);
+    };
+    loadInitialEvents();
+  }, []); // Only run once on mount
 
   if (loading && !gameState) {
     return (
@@ -53,14 +47,16 @@ const GameDashboard = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-space-blue">
+    <div className="h-screen flex flex-col bg-space-blue overflow-hidden">
       {/* Resource HUD */}
-      <ResourceHUD gameState={gameState} />
+      <div className="flex-shrink-0">
+        <ResourceHUD gameState={gameState} />
+      </div>
       
       {/* Main Game Area */}
-      <div className="flex-1 grid grid-cols-12 gap-4 p-4 h-full">
+      <div className="flex-1 grid grid-cols-12 gap-3 p-3 overflow-hidden">
         {/* Map Panel - Left Side */}
-        <div className="col-span-8">
+        <div className="col-span-8 h-full overflow-hidden">
           <MapPanel 
             gameState={gameState} 
             events={events}
@@ -69,7 +65,7 @@ const GameDashboard = () => {
         </div>
         
         {/* Command Panel - Right Side */}
-        <div className="col-span-4 flex flex-col space-y-4">
+        <div className="col-span-4 h-full overflow-hidden">
           <CommandPanel>
             <EventFeed events={events} />
             <ActionButtons 

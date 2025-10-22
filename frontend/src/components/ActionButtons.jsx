@@ -61,27 +61,23 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-1.5 flex-shrink-0">
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-1.5">
         <motion.button
           variants={buttonVariants}
           whileHover="hover"
           whileTap="tap"
           onClick={() => handleAction('deploy_satellite')}
           disabled={loading || gameState.satellites <= 0}
-          className={`p-3 rounded-lg font-mono text-sm font-bold transition-all ${
+          className={`p-1.5 rounded font-mono text-xs font-bold transition-all ${
             gameState.satellites <= 0
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-neon-blue hover:bg-blue-500 text-white glow-blue'
           }`}
         >
-          <div className="text-lg mb-1">🛰️</div>
-          <div>Deploy</div>
-          <div>Satellite</div>
-          <div className="text-xs opacity-75">
-            ({gameState.satellites} left)
-          </div>
+          <div className="text-sm">🛰️</div>
+          <div className="text-xs leading-tight">Satellite ({gameState.satellites})</div>
         </motion.button>
 
         <motion.button
@@ -90,18 +86,14 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
           whileTap="tap"
           onClick={() => handleAction('launch_probe')}
           disabled={loading || gameState.probes <= 0 || gameState.funds < 100000}
-          className={`p-3 rounded-lg font-mono text-sm font-bold transition-all ${
+          className={`p-1.5 rounded font-mono text-xs font-bold transition-all ${
             gameState.probes <= 0 || gameState.funds < 100000
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-neon-green hover:bg-green-500 text-black glow-green'
           }`}
         >
-          <div className="text-lg mb-1">🚀</div>
-          <div>Launch</div>
-          <div>Probe</div>
-          <div className="text-xs opacity-75">
-            ({gameState.probes} left)
-          </div>
+          <div className="text-sm">🚀</div>
+          <div className="text-xs leading-tight">Probe ({gameState.probes})</div>
         </motion.button>
 
         <motion.button
@@ -110,18 +102,14 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
           whileTap="tap"
           onClick={() => handleAction('research')}
           disabled={loading || gameState.funds < 50000}
-          className={`p-3 rounded-lg font-mono text-sm font-bold transition-all ${
+          className={`p-1.5 rounded font-mono text-xs font-bold transition-all ${
             gameState.funds < 50000
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-neon-yellow hover:bg-yellow-500 text-black glow-yellow'
           }`}
         >
-          <div className="text-lg mb-1">🔬</div>
-          <div>Research</div>
-          <div>Team</div>
-          <div className="text-xs opacity-75">
-            ($50K)
-          </div>
+          <div className="text-sm">🔬</div>
+          <div className="text-xs leading-tight">Research</div>
         </motion.button>
 
         <motion.button
@@ -129,29 +117,24 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
           whileHover="hover"
           whileTap="tap"
           onClick={onUpgradeClick}
-          className="p-3 rounded-lg font-mono text-sm font-bold bg-purple-600 hover:bg-purple-500 text-white glow-blue transition-all"
+          className="p-1.5 rounded font-mono text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white glow-blue transition-all"
         >
-          <div className="text-lg mb-1">⚡</div>
-          <div>Upgrade</div>
-          <div>Lab</div>
+          <div className="text-sm">⚡</div>
+          <div className="text-xs leading-tight">Upgrades</div>
         </motion.button>
       </div>
 
       {/* Control Buttons */}
-      <div className="space-y-2">
+      <div className="space-y-1">
         <motion.button
           variants={buttonVariants}
           whileHover="hover"
           whileTap="tap"
           onClick={handleAdvanceDay}
           disabled={loading}
-          className="w-full p-3 rounded-lg font-mono text-sm font-bold bg-orange-600 hover:bg-orange-500 text-white glow-blue transition-all disabled:opacity-50"
+          className="w-full p-1.5 rounded font-mono text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white transition-all disabled:opacity-50"
         >
-          <div className="text-lg mb-1">⏭️</div>
-          <div>Advance Day</div>
-          <div className="text-xs opacity-75">
-            (Restore Resources)
-          </div>
+          ⏭️ Advance Day
         </motion.button>
 
         <motion.button
@@ -160,27 +143,27 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
           whileTap="tap"
           onClick={handleResetGame}
           disabled={loading}
-          className="w-full p-2 rounded-lg font-mono text-xs font-bold bg-neon-red hover:bg-red-500 text-white glow-red transition-all disabled:opacity-50"
+          className="w-full p-1 rounded font-mono text-xs font-bold bg-neon-red hover:bg-red-500 text-white transition-all disabled:opacity-50"
         >
-          🔄 Reset Game
+          🔄 Reset
         </motion.button>
       </div>
 
       {/* Last Action Result */}
       {lastAction && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`p-2 rounded text-xs font-mono ${
+          className={`p-1.5 rounded text-xs font-mono ${
             lastAction.success
               ? 'bg-green-900/50 text-neon-green border border-neon-green'
               : 'bg-red-900/50 text-neon-red border border-neon-red'
           }`}
         >
-          {lastAction.message}
+          <div className="leading-tight">{lastAction.message}</div>
           {lastAction.scoreChange !== 0 && (
-            <div className="mt-1">
-              Score: {lastAction.scoreChange > 0 ? '+' : ''}{lastAction.scoreChange}
+            <div className="text-xs opacity-75">
+              {lastAction.scoreChange > 0 ? '+' : ''}{lastAction.scoreChange}
             </div>
           )}
         </motion.div>
@@ -188,9 +171,9 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
 
       {/* Loading Indicator */}
       {loading && (
-        <div className="text-center py-2">
-          <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-neon-blue"></div>
-          <span className="ml-2 text-xs text-gray-400 font-mono">Processing...</span>
+        <div className="text-center py-1">
+          <div className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-neon-blue"></div>
+          <span className="ml-1.5 text-xs text-gray-400 font-mono">Processing...</span>
         </div>
       )}
     </div>

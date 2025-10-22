@@ -6,14 +6,19 @@ const MapPanel = ({ gameState, events, threats }) => {
   const { getLatestEarthImage } = useGame();
   const [earthImage, setEarthImage] = useState(null);
   const [selectedThreat, setSelectedThreat] = useState(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
-    const loadEarthImage = async () => {
-      const image = await getLatestEarthImage();
-      setEarthImage(image);
-    };
-    loadEarthImage();
-  }, [getLatestEarthImage]);
+    // Only load image once
+    if (!imageLoaded) {
+      const loadEarthImage = async () => {
+        const image = await getLatestEarthImage();
+        setEarthImage(image);
+        setImageLoaded(true);
+      };
+      loadEarthImage();
+    }
+  }, [getLatestEarthImage, imageLoaded]);
 
   const getThreatColor = (riskLevel) => {
     switch (riskLevel) {
@@ -34,18 +39,18 @@ const MapPanel = ({ gameState, events, threats }) => {
   };
 
   return (
-    <div className="bg-dark-gray rounded-2xl border border-neon-blue/30 p-6 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-neon-blue font-mono">
+    <div className="bg-dark-gray rounded-xl border border-neon-blue/30 p-3 flex flex-col h-full">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-bold text-neon-blue font-mono">
           🌍 EARTH DEFENSE MAP
         </h2>
-        <div className="text-sm text-gray-400 font-mono">
+        <div className="text-xs text-gray-400 font-mono">
           {threats.length} Active Threats
         </div>
       </div>
 
       {/* Earth Visualization */}
-      <div className="flex-1 relative bg-gradient-to-br from-blue-900 to-green-900 rounded-xl overflow-hidden mb-4">
+      <div className="flex-1 relative bg-gradient-to-br from-blue-900 to-green-900 rounded-lg overflow-hidden mb-2 min-h-[200px]">
         {earthImage ? (
           <div className="relative h-full">
             <img
@@ -88,20 +93,20 @@ const MapPanel = ({ gameState, events, threats }) => {
       </div>
 
       {/* Threat List */}
-      <div className="bg-medium-gray rounded-lg p-4">
-        <h3 className="text-lg font-bold text-white mb-3 font-mono">ACTIVE THREATS</h3>
+      <div className="bg-medium-gray rounded-lg p-2">
+        <h3 className="text-sm font-bold text-white mb-2 font-mono">ACTIVE THREATS</h3>
         {threats.length === 0 ? (
-          <p className="text-gray-400 font-mono text-center py-4">
+          <p className="text-gray-400 font-mono text-center py-2 text-xs">
             No active threats detected
           </p>
         ) : (
-          <div className="space-y-2 max-h-32 overflow-y-auto">
-            {threats.slice(0, 5).map((threat) => (
+          <div className="space-y-1 max-h-24 overflow-y-auto">
+            {threats.slice(0, 3).map((threat) => (
               <motion.div
                 key={threat.id}
                 initial={{ x: -100, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                className={`p-2 rounded border-l-4 ${
+                className={`p-1.5 rounded border-l-2 cursor-pointer hover:bg-opacity-30 ${
                   threat.severity === 'critical' ? 'border-neon-red bg-red-900/20' :
                   threat.severity === 'moderate' ? 'border-orange-500 bg-orange-900/20' :
                   threat.severity === 'low' ? 'border-neon-yellow bg-yellow-900/20' :
@@ -110,11 +115,11 @@ const MapPanel = ({ gameState, events, threats }) => {
                 onClick={() => setSelectedThreat(threat)}
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-white">{threat.title}</p>
-                    <p className="text-xs text-gray-300">{threat.description}</p>
+                  <div className="flex-1 min-w-0 mr-2">
+                    <p className="text-xs font-bold text-white truncate">{threat.title}</p>
+                    <p className="text-xs text-gray-400 truncate">{threat.description}</p>
                   </div>
-                  <span className={`text-xs font-mono px-2 py-1 rounded ${
+                  <span className={`text-xs font-mono px-1.5 py-0.5 rounded flex-shrink-0 ${
                     threat.severity === 'critical' ? 'bg-neon-red text-black' :
                     threat.severity === 'moderate' ? 'bg-orange-500 text-black' :
                     threat.severity === 'low' ? 'bg-neon-yellow text-black' :

@@ -29,17 +29,32 @@ const ResourceHUD = ({ gameState }) => {
     <motion.div
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className="bg-dark-gray border-b-2 border-neon-blue p-4"
+      className="bg-dark-gray border-b-2 border-neon-blue p-2"
     >
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+      <div className="max-w-full mx-auto">
+        <div className="flex items-center justify-between gap-4 mb-2">
+          {/* Header on the left */}
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🌎</span>
+            <div>
+              <h1 className="text-lg font-bold text-neon-blue font-mono leading-tight">
+                Earth Defense Command
+              </h1>
+              <p className="text-xs text-gray-400 font-mono leading-tight">
+                Protect humanity using real NASA data
+              </p>
+            </div>
+          </div>
+
+          {/* Resources on the right */}
+          <div className="flex-1 grid grid-cols-3 md:grid-cols-6 gap-2 max-w-4xl ml-auto">
           {/* Funds */}
-          <div className="bg-medium-gray rounded-lg p-3 glow-blue">
+          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
             <div className="flex items-center space-x-2">
-              <span className="text-2xl">💰</span>
+              <span className="text-xl">💰</span>
               <div>
                 <p className="text-xs text-gray-400 font-mono">FUNDS</p>
-                <p className="text-lg font-bold text-neon-green">
+                <p className="text-sm font-bold text-neon-green">
                   {formatCurrency(gameState.funds)}
                 </p>
               </div>
@@ -47,12 +62,12 @@ const ResourceHUD = ({ gameState }) => {
           </div>
 
           {/* Power */}
-          <div className="bg-medium-gray rounded-lg p-3 glow-blue">
+          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
             <div className="flex items-center space-x-2">
-              <span className="text-2xl">⚡</span>
+              <span className="text-xl">⚡</span>
               <div>
                 <p className="text-xs text-gray-400 font-mono">POWER</p>
-                <p className={`text-lg font-bold ${getPowerColor(gameState.power)}`}>
+                <p className={`text-sm font-bold ${getPowerColor(gameState.power)}`}>
                   {gameState.power}%
                 </p>
               </div>
@@ -60,12 +75,12 @@ const ResourceHUD = ({ gameState }) => {
           </div>
 
           {/* Satellites */}
-          <div className="bg-medium-gray rounded-lg p-3 glow-blue">
+          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
             <div className="flex items-center space-x-2">
-              <span className="text-2xl">🛰️</span>
+              <span className="text-xl">🛰️</span>
               <div>
                 <p className="text-xs text-gray-400 font-mono">SATELLITES</p>
-                <p className="text-lg font-bold text-neon-blue">
+                <p className="text-sm font-bold text-neon-blue">
                   {gameState.satellites}/5
                 </p>
               </div>
@@ -73,12 +88,12 @@ const ResourceHUD = ({ gameState }) => {
           </div>
 
           {/* Probes */}
-          <div className="bg-medium-gray rounded-lg p-3 glow-blue">
+          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
             <div className="flex items-center space-x-2">
-              <span className="text-2xl">🚀</span>
+              <span className="text-xl">🚀</span>
               <div>
                 <p className="text-xs text-gray-400 font-mono">PROBES</p>
-                <p className="text-lg font-bold text-neon-blue">
+                <p className="text-sm font-bold text-neon-blue">
                   {gameState.probes}/3
                 </p>
               </div>
@@ -86,12 +101,12 @@ const ResourceHUD = ({ gameState }) => {
           </div>
 
           {/* Day */}
-          <div className="bg-medium-gray rounded-lg p-3 glow-blue">
+          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
             <div className="flex items-center space-x-2">
-              <span className="text-2xl">📅</span>
+              <span className="text-xl">📅</span>
               <div>
                 <p className="text-xs text-gray-400 font-mono">DAY</p>
-                <p className="text-lg font-bold text-white">
+                <p className="text-sm font-bold text-white">
                   {gameState.day}
                 </p>
               </div>
@@ -99,30 +114,31 @@ const ResourceHUD = ({ gameState }) => {
           </div>
 
           {/* Score */}
-          <div className="bg-medium-gray rounded-lg p-3 glow-blue">
+          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
             <div className="flex items-center space-x-2">
-              <span className="text-2xl">⭐</span>
+              <span className="text-xl">⭐</span>
               <div>
                 <p className="text-xs text-gray-400 font-mono">SCORE</p>
-                <p className="text-lg font-bold text-neon-yellow">
+                <p className="text-sm font-bold text-neon-yellow">
                   {gameState.score.toLocaleString()}
                 </p>
               </div>
             </div>
           </div>
+          </div>
         </div>
 
         {/* Earth Damage Bar */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-mono text-gray-400">EARTH DAMAGE</span>
-            <span className={`text-sm font-bold ${getDamageColor(gameState.earthDamage)}`}>
+        <div className="mt-1">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-mono text-gray-400">EARTH DAMAGE</span>
+            <span className={`text-xs font-bold ${getDamageColor(gameState.earthDamage)}`}>
               {gameState.earthDamage}%
             </span>
           </div>
-          <div className="w-full bg-dark-gray rounded-full h-3">
+          <div className="w-full bg-dark-gray rounded-full h-2">
             <motion.div
-              className={`h-3 rounded-full ${
+              className={`h-2 rounded-full ${
                 gameState.earthDamage < 25 ? 'bg-neon-green' :
                 gameState.earthDamage < 50 ? 'bg-neon-yellow' :
                 gameState.earthDamage < 75 ? 'bg-orange-500' : 'bg-neon-red'
