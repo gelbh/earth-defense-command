@@ -1,10 +1,10 @@
-import React, { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import React, { useRef, useMemo, Suspense } from 'react';
+import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { OrbitControls, Sphere, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Earth component
-function Earth() {
+// Earth component with real NASA texture
+function Earth({ textureUrl }) {
   const earthRef = useRef();
   
   // Rotate Earth continuously
@@ -14,7 +14,60 @@ function Earth() {
     }
   });
 
-  // Create Earth material with colors (simplified without texture loading)
+  // Try to load real NASA EPIC texture
+  let texture = null;
+  try {
+    if (textureUrl) {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      texture = useLoader(THREE.TextureLoader, textureUrl);
+    }
+  } catch (error) {
+    console.warn('Failed to load Earth texture, using fallback');
+  }
+
+  // Create Earth material - with texture if available, otherwise blue
+  const earthMaterial = useMemo(() => {
+    if (texture) {
+      return new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.8,
+        metalness: 0.2,
+      });
+    } else {
+      return new THREE.MeshStandardMaterial({
+        color: '#2233ff',
+        emissive: '#112244',
+        roughness: 0.9,
+        metalness: 0.1,
+      });
+    }
+  }, [texture]);
+
+  return (
+    <Sphere ref={earthRef} args={[2, 64, 64]} material={earthMaterial}>
+      {/* Add atmosphere glow */}
+      <Sphere args={[2.05, 64, 64]}>
+        <meshBasicMaterial
+          color="#4477ff"
+          transparent
+          opacity={0.1}
+          side={THREE.BackSide}
+        />
+      </Sphere>
+    </Sphere>
+  );
+}
+
+// Fallback Earth (no texture)
+function FallbackEarth() {
+  const earthRef = useRef();
+  
+  useFrame(() => {
+    if (earthRef.current) {
+      earthRef.current.rotation.y += 0.002;
+    }
+  });
+
   const earthMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: '#2233ff',
@@ -26,7 +79,6 @@ function Earth() {
 
   return (
     <Sphere ref={earthRef} args={[2, 64, 64]} material={earthMaterial}>
-      {/* Add atmosphere glow */}
       <Sphere args={[2.05, 64, 64]}>
         <meshBasicMaterial
           color="#4477ff"
@@ -253,7 +305,7 @@ function ResearchStation({ index }) {
 }
 
 // Main 3D Scene
-function Scene({ threats, gameState }) {
+function Scene({ threats, gameState, earthTextureUrl }) {
   return (
     <>
       {/* Ambient light for overall illumination */}
@@ -276,8 +328,10 @@ function Scene({ threats, gameState }) {
         speed={1}
       />
       
-      {/* Earth */}
-      <Earth />
+      {/* Earth with real NASA texture */}
+      <Suspense fallback={<FallbackEarth />}>
+        <Earth textureUrl={earthTextureUrl} />
+      </Suspense>
       
       {/* Orbit rings */}
       <OrbitRing radius={2.5} color="#00d4ff" opacity={0.12} /> {/* Satellite orbit */}
@@ -347,13 +401,47 @@ function Scene({ threats, gameState }) {
 
 // Main Earth3D component
 const Earth3D = ({ threats = [], gameState = null }) => {
+  const [earthTextureUrl, setEarthTextureUrl] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+
+  // Fetch latest Earth image from NASA EPIC API on mount
+  React.useEffect(() => {
+    const fetchEarthImage = async () => {
+      try {
+        const response = await fetch('/api/epic/latest');
+        const data = await response.json();
+        
+        if (data.success && data.image?.imageUrl) {
+          // Use CORS proxy for NASA images
+          setEarthTextureUrl(data.image.imageUrl);
+          console.log('Loaded NASA EPIC Earth image:', data.image.imageUrl);
+        }
+      } catch (error) {
+        console.warn('Failed to load NASA Earth image, using fallback', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEarthImage();
+    
+    // Refresh Earth image every 10 minutes
+    const interval = setInterval(fetchEarthImage, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="w-full h-full bg-black rounded-lg overflow-hidden">
+    <div className="w-full h-full bg-black rounded-lg overflow-hidden relative">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
+          <div className="text-neon-blue font-mono text-sm">Loading NASA Earth data...</div>
+        </div>
+      )}
       <Canvas
         camera={{ position: [0, 3, 8], fov: 50 }}
         gl={{ antialias: true, alpha: false }}
       >
-        <Scene threats={threats} gameState={gameState} />
+        <Scene threats={threats} gameState={gameState} earthTextureUrl={earthTextureUrl} />
       </Canvas>
     </div>
   );
