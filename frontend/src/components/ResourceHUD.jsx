@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const ResourceHUD = ({ gameState }) => {
+const ResourceHUD = ({ gameState, onHelpClick }) => {
   const formatCurrency = (amount) => {
     if (amount >= 1000000) {
       return `$${(amount / 1000000).toFixed(1)}M`;
@@ -44,6 +44,14 @@ const ResourceHUD = ({ gameState }) => {
                 Protect humanity using real NASA data
               </p>
             </div>
+            {/* Help Button */}
+            <button
+              onClick={onHelpClick}
+              className="ml-2 px-2 py-1 bg-neon-blue/20 hover:bg-neon-blue/40 border border-neon-blue rounded text-neon-blue text-xs font-bold transition-colors"
+              title="How to Play"
+            >
+              ❓ Help
+            </button>
           </div>
 
           {/* Resources on the right */}

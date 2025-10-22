@@ -7,10 +7,12 @@ import CommandPanel from './CommandPanel';
 import EventFeed from './EventFeed';
 import ActionButtons from './ActionButtons';
 import UpgradeModal from './UpgradeModal';
+import TutorialModal from './TutorialModal';
 
 const GameDashboard = () => {
   const { gameState, loading, error, generateEvents, resetGame } = useGame();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(true);
   const [events, setEvents] = useState([]);
 
   // Initial event generation only
@@ -57,7 +59,7 @@ const GameDashboard = () => {
     <div className="h-screen flex flex-col bg-space-blue overflow-hidden">
       {/* Resource HUD */}
       <div className="flex-shrink-0">
-        <ResourceHUD gameState={gameState} />
+        <ResourceHUD gameState={gameState} onHelpClick={() => setShowTutorial(true)} />
       </div>
       
       {/* Main Game Area */}
@@ -82,6 +84,11 @@ const GameDashboard = () => {
           </CommandPanel>
         </div>
       </div>
+
+      {/* Tutorial Modal */}
+      {showTutorial && (
+        <TutorialModal onClose={() => setShowTutorial(false)} />
+      )}
 
       {/* Upgrade Modal */}
       {showUpgradeModal && (
