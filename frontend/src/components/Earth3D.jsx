@@ -1,10 +1,10 @@
-import React, { useRef, useMemo, Suspense, useState, useEffect } from 'react';
+import React, { useRef, useMemo, Suspense, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
 import { OrbitControls, Sphere, Stars, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Earth component with proper spherical texture
-function Earth({ isPaused = false }) {
+// Earth component with proper spherical texture (supports NASA EPIC images)
+function Earth({ isPaused = false, epicImageUrl = null }) {
   const earthRef = useRef();
   
   // Rotate Earth continuously
@@ -14,9 +14,8 @@ function Earth({ isPaused = false }) {
     }
   });
 
-  // Use reliable CORS-friendly Earth texture
-  // Using jsdelivr CDN which is fast and reliable
-  const earthTextureUrl = 'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg';
+  // Use NASA EPIC image if available, otherwise fallback to Blue Marble
+  const earthTextureUrl = epicImageUrl || 'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg';
   
   const texture = useLoader(THREE.TextureLoader, earthTextureUrl);
 
@@ -709,7 +708,7 @@ function LaserBeam({ startPosition, endPosition, level = 1, intensity = 1 }) {
 }
 
 // Probe component with laser capabilities
-function Probe({ probe, index, onUpgrade, isPaused = false }) {
+function Probe({ probe, index, onUpgrade, isPaused = false, onPositionUpdate }) {
   const probeRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
@@ -767,10 +766,19 @@ function Probe({ probe, index, onUpgrade, isPaused = false }) {
       
       // Calculate position based on elapsed time
       const t = elapsedTime * speed + orbitPosition;
-      probeRef.current.position.x = Math.cos(t) * radius;
-      probeRef.current.position.z = Math.sin(t) * radius;
-      probeRef.current.position.y = Math.cos(t * 1.5) * 0.3;
+      const x = Math.cos(t) * radius;
+      const y = Math.cos(t * 1.5) * 0.3;
+      const z = Math.sin(t) * radius;
+      
+      probeRef.current.position.x = x;
+      probeRef.current.position.z = z;
+      probeRef.current.position.y = y;
       probeRef.current.rotation.y = t + Math.PI / 2;
+      
+      // Update parent with current position for laser targeting
+      if (onPositionUpdate) {
+        onPositionUpdate(probe.id, [x, y, z]);
+      }
     }
   });
 
@@ -869,7 +877,7 @@ function ResearchStation({ index }) {
 }
 
 // Main 3D Scene
-function Scene({ threats, gameState, onDeflectAsteroid, onImpact, onUpgrade, activeLasers = [], impactFlashes = [], isPaused = false }) {
+function Scene({ threats, gameState, onDeflectAsteroid, onImpact, onUpgrade, activeLasers = [], impactFlashes = [], isPaused = false, onProbePositionUpdate, epicImageUrl = null }) {
   return (
     <>
       {/* Ambient light for overall illumination */}
@@ -892,9 +900,9 @@ function Scene({ threats, gameState, onDeflectAsteroid, onImpact, onUpgrade, act
         speed={isPaused ? 0 : 1}
       />
       
-      {/* Earth with NASA Blue Marble texture */}
+      {/* Earth with NASA EPIC image or fallback to Blue Marble texture */}
       <Suspense fallback={<FallbackEarth />}>
-        <Earth isPaused={isPaused} />
+        <Earth isPaused={isPaused} epicImageUrl={epicImageUrl} />
       </Suspense>
       
       {/* Orbit rings */}
@@ -910,7 +918,14 @@ function Scene({ threats, gameState, onDeflectAsteroid, onImpact, onUpgrade, act
       
       {/* Deployed Probes */}
       {gameState && Array.isArray(gameState.probes) && gameState.probes.map((probe, index) => (
-        <Probe key={probe.id || `probe-${index}`} probe={probe} index={index} onUpgrade={onUpgrade} isPaused={isPaused} />
+        <Probe 
+          key={probe.id || `probe-${index}`} 
+          probe={probe} 
+          index={index} 
+          onUpgrade={onUpgrade} 
+          isPaused={isPaused}
+          onPositionUpdate={onProbePositionUpdate}
+        />
       ))}
       
       {/* Research Stations */}
@@ -1037,10 +1052,18 @@ function ImpactFlash({ position = [0, 0, 0], onComplete }) {
 }
 
 // Main Earth3D component
-const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onImpact = null, onUpgrade = null }) => {
+const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onImpact = null, onUpgrade = null, epicImageUrl = null }) => {
   const [activeLasers, setActiveLasers] = useState([]);
   const [impactFlashes, setImpactFlashes] = useState([]);
   const [isPaused, setIsPaused] = useState(false);
+  
+  // Track real-time probe positions for accurate laser targeting
+  const probePositionsRef = useRef({});
+  
+  // Callback for probes to update their positions
+  const handleProbePositionUpdate = useCallback((probeId, position) => {
+    probePositionsRef.current[probeId] = position;
+  }, []);
   
   // Wrapper for impact that shows flash effect
   const handleImpactWithFlash = (threat, asteroidPosition) => {
@@ -1219,10 +1242,16 @@ const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onI
     return nearest;
   };
   
-  // Helper to calculate probe position in orbit
+  // Helper to calculate probe position - uses real-time positions from probe updates
   const calculateProbePosition = (probe) => {
+    // Use the real-time position if available
+    if (probePositionsRef.current[probe.id]) {
+      return probePositionsRef.current[probe.id];
+    }
+    
+    // Fallback to calculated position based on orbitPosition
     const radius = 2.8;
-    const angle = probe.orbitPosition || 0;
+    const angle = probe?.orbitPosition || 0;
     
     return [
       Math.cos(angle) * radius,
@@ -1250,6 +1279,7 @@ const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onI
           activeLasers={activeLasers}
           impactFlashes={impactFlashes}
           isPaused={isPaused}
+          onProbePositionUpdate={handleProbePositionUpdate}
         />
       </Canvas>
     </div>
