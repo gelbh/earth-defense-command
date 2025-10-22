@@ -3,7 +3,6 @@ import express from 'express';
 import cors from 'cors';
 import eventRoutes from './routes/events.js';
 import neoRoutes from './routes/neo.js';
-import epicRoutes from './routes/epic.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
@@ -21,8 +20,7 @@ app.get('/api/health', (req, res) => {
     version: '1.0.0',
     endpoints: {
       events: '/api/events',
-      neo: '/api/neo',
-      epic: '/api/epic'
+      neo: '/api/neo'
     }
   });
 });
@@ -30,7 +28,6 @@ app.get('/api/health', (req, res) => {
 // Game API routes
 app.use('/api/events', eventRoutes);
 app.use('/api/neo', neoRoutes);
-app.use('/api/epic', epicRoutes);
 
 // Error handling
 app.use(notFound);

@@ -3,7 +3,6 @@ import axios from "axios";
 
 const NASA_API_KEY = process.env.NASA_API_KEY || "DEMO_KEY";
 const NEO_API_BASE = "https://api.nasa.gov/neo/rest/v1";
-const EPIC_API_BASE = "https://api.nasa.gov/EPIC/api";
 
 // Verify API key on module load
 if (NASA_API_KEY === "DEMO_KEY") {
@@ -12,11 +11,9 @@ if (NASA_API_KEY === "DEMO_KEY") {
   console.log(`✅ NASA Service: Custom API key loaded (${NASA_API_KEY.substring(0, 8)}...)`);
 }
 
-// Cache for NASA data
+// Cache for NASA NEO data
 let cachedNEOData = null;
-let cachedEPICData = null;
 let neoCacheTimestamp = null;
-let epicCacheTimestamp = null;
 const CACHE_DURATION = 1000 * 60 * 10; // 10 minutes
 
 // Rate limit tracking
@@ -49,32 +46,6 @@ class NasaService {
     } catch (error) {
       console.error("Error fetching NEO data:", error.message);
       throw new Error("Failed to fetch NEO data from NASA API");
-    }
-  }
-
-  async getEPICImages() {
-    // Check cache first
-    if (
-      cachedEPICData &&
-      epicCacheTimestamp &&
-      Date.now() - epicCacheTimestamp < CACHE_DURATION
-    ) {
-      return cachedEPICData;
-    }
-
-    try {
-      const response = await axios.get(`${EPIC_API_BASE}/natural/images`, {
-        params: {
-          api_key: NASA_API_KEY,
-        },
-      });
-
-      cachedEPICData = response.data;
-      epicCacheTimestamp = Date.now();
-      return cachedEPICData;
-    } catch (error) {
-      console.error("Error fetching EPIC data:", error.message);
-      throw new Error("Failed to fetch EPIC data from NASA API");
     }
   }
 
@@ -139,42 +110,9 @@ class NasaService {
           cached: !!cachedNEOData,
           valid: neoCacheTimestamp && (Date.now() - neoCacheTimestamp < CACHE_DURATION),
           age: neoCacheTimestamp ? Math.floor((Date.now() - neoCacheTimestamp) / 1000) : null
-        },
-        epic: {
-          cached: !!cachedEPICData,
-          valid: epicCacheTimestamp && (Date.now() - epicCacheTimestamp < CACHE_DURATION),
-          age: epicCacheTimestamp ? Math.floor((Date.now() - epicCacheTimestamp) / 1000) : null
         }
       }
     };
-  }
-
-  async getLatestEarthImage() {
-    try {
-      const epicData = await this.getEPICImages();
-      
-      if (epicData && epicData.length > 0) {
-        const latestImage = epicData[0];
-        return {
-          id: latestImage.identifier,
-          date: latestImage.date,
-          caption: latestImage.caption,
-          imageUrl: `https://epic.gsfc.nasa.gov/archive/natural/${latestImage.date.split(' ')[0].replace(/-/g, '/')}/png/${latestImage.image}.png`
-        };
-      }
-      
-      return null;
-    } catch (error) {
-      console.error("Error fetching Earth image:", error.message);
-      
-      // Return a fallback placeholder when EPIC API fails (e.g., rate limit)
-      return {
-        id: 'fallback',
-        date: new Date().toISOString(),
-        caption: 'Earth (Placeholder - NASA EPIC temporarily unavailable)',
-        imageUrl: 'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=800&h=800&fit=crop'
-      };
-    }
   }
 
   // Helper method to calculate risk level for an asteroid

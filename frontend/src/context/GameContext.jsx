@@ -37,10 +37,10 @@ const gameReducer = (state, action) => {
         score: state.score + action.payload,
       };
     
-    case 'UPDATE_EARTH_DAMAGE':
+    case 'UPDATE_EARTH_HEALTH':
       return {
         ...state,
-        earthDamage: Math.max(0, Math.min(100, state.earthDamage + action.payload)),
+        earthHealth: Math.max(0, Math.min(100, state.earthHealth + action.payload)),
       };
     
     case 'PURCHASE_UPGRADE':
@@ -69,7 +69,7 @@ const gameReducer = (state, action) => {
         },
         events: [],
         threats: [],
-        earthDamage: 0,
+        earthHealth: 100,
         reputation: 100,
       };
     
@@ -218,17 +218,16 @@ export const GameProvider = ({ children }) => {
     return [];
   };
 
-  const getLatestEarthImage = async () => {
+  const startGame = async () => {
     try {
-      const response = await api.get('/epic/latest');
-      if (response.data.success) {
-        return response.data.image;
-      }
+      setLoading(true);
+      await generateEvents();
     } catch (err) {
-      console.error('Error fetching Earth image:', err);
-      setError('Failed to fetch Earth image');
+      console.error('Error starting game:', err);
+      setError('Failed to start game');
+    } finally {
+      setLoading(false);
     }
-    return null;
   };
 
   const value = {
@@ -238,12 +237,12 @@ export const GameProvider = ({ children }) => {
     setError,
     loadGameState,
     generateEvents,
+    startGame,
     processAction,
     purchaseUpgrade,
     advanceDay,
     resetGame,
     getNearEarthObjects,
-    getLatestEarthImage,
   };
 
   return (
