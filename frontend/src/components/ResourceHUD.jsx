@@ -12,151 +12,168 @@ const ResourceHUD = ({ gameState, onHelpClick }) => {
   };
 
   const getPowerColor = (power) => {
-    if (power > 75) return 'text-neon-green';
-    if (power > 50) return 'text-neon-yellow';
-    if (power > 25) return 'text-orange-500';
-    return 'text-neon-red';
+    if (power > 75) return 'from-green-500 to-green-400';
+    if (power > 50) return 'from-yellow-500 to-yellow-400';
+    if (power > 25) return 'from-orange-500 to-orange-400';
+    return 'from-red-500 to-red-400';
   };
 
-  const getDamageColor = (damage) => {
-    if (damage < 25) return 'text-neon-green';
-    if (damage < 50) return 'text-neon-yellow';
-    if (damage < 75) return 'text-orange-500';
-    return 'text-neon-red';
+  const getPowerTextColor = (power) => {
+    if (power > 75) return 'text-green-400';
+    if (power > 50) return 'text-yellow-400';
+    if (power > 25) return 'text-orange-400';
+    return 'text-red-400';
+  };
+
+  const StatCard = ({ icon, label, value, subValue, color = 'neon-blue', animate = false }) => (
+    <motion.div
+      whileHover={{ scale: 1.02, y: -2 }}
+      className="relative bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-lg p-3 overflow-hidden group"
+    >
+      {/* Animated background gradient */}
+      <div className={`absolute inset-0 bg-gradient-to-br from-${color}/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+      
+      {/* Top accent line */}
+      <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-${color} to-transparent`}></div>
+      
+      <div className="relative">
+        <div className="flex items-start justify-between mb-1">
+          <span className="text-2xl filter drop-shadow-lg">{icon}</span>
+          <span className={`text-[10px] font-bold text-${color} uppercase tracking-wider opacity-60`}>
+            {label}
+          </span>
+        </div>
+        <div className="mt-1">
+          <p className={`text-lg font-bold text-${color} tracking-tight font-mono`}>
+            {value}
+          </p>
+          {subValue && (
+            <p className="text-[10px] text-gray-500 font-mono mt-0.5">
+              {subValue}
+            </p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  const PowerCard = () => {
+    const power = gameState.power;
+    const powerColor = getPowerColor(power);
+    const textColor = getPowerTextColor(power);
+
+    return (
+      <motion.div
+        whileHover={{ scale: 1.02, y: -2 }}
+        className="relative bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-lg p-3 overflow-hidden group"
+      >
+        {/* Top accent line */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-yellow-500 to-transparent"></div>
+        
+        <div className="relative">
+          <div className="flex items-start justify-between mb-1">
+            <span className="text-2xl filter drop-shadow-lg">⚡</span>
+            <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider opacity-60">
+              POWER
+            </span>
+          </div>
+          
+          {/* Power bar */}
+          <div className="mt-2 mb-1">
+            <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${power}%` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className={`h-full bg-gradient-to-r ${powerColor} rounded-full relative`}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+              </motion.div>
+            </div>
+          </div>
+          
+          <p className={`text-lg font-bold ${textColor} tracking-tight font-mono`}>
+            {power}%
+          </p>
+        </div>
+      </motion.div>
+    );
   };
 
   return (
     <motion.div
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className="bg-dark-gray border-b-2 border-neon-blue p-2"
+      className="bg-gradient-to-b from-gray-950 to-gray-900 border-b border-neon-blue/30 shadow-2xl"
     >
-      <div className="max-w-full mx-auto">
-        <div className="flex items-center justify-between gap-4 mb-2">
+      <div className="max-w-full mx-auto px-4 py-3">
+        <div className="flex items-center justify-between gap-6 mb-3">
           {/* Header on the left */}
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🌎</span>
+          <motion.div 
+            className="flex items-center gap-3"
+            whileHover={{ scale: 1.02 }}
+          >
+            <div className="text-3xl filter drop-shadow-lg">🌎</div>
             <div>
-              <h1 className="text-lg font-bold text-neon-blue font-mono leading-tight">
-                Earth Defense Command
+              <h1 className="text-xl font-bold bg-gradient-to-r from-neon-blue via-blue-400 to-neon-blue bg-clip-text text-transparent font-mono leading-tight tracking-wide">
+                EARTH DEFENSE COMMAND
               </h1>
-              <p className="text-xs text-gray-400 font-mono leading-tight">
-                Protect humanity using real NASA data
+              <p className="text-xs text-gray-400 font-mono leading-tight tracking-wide">
+                Real-time planetary defense • NASA Data
               </p>
             </div>
+            
             {/* Help Button */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(59, 130, 246, 0.5)" }}
+              whileTap={{ scale: 0.95 }}
               onClick={onHelpClick}
-              className="ml-2 px-2 py-1 bg-neon-blue/20 hover:bg-neon-blue/40 border border-neon-blue rounded text-neon-blue text-xs font-bold transition-colors"
+              className="ml-2 px-3 py-1.5 bg-gradient-to-r from-neon-blue/20 to-blue-600/20 hover:from-neon-blue/40 hover:to-blue-600/40 border border-neon-blue rounded-lg text-neon-blue text-xs font-bold transition-all duration-300"
               title="How to Play"
             >
-              ❓ Help
-            </button>
-          </div>
+              <span className="mr-1">❓</span> HELP
+            </motion.button>
+          </motion.div>
 
-          {/* Resources on the right */}
-          <div className="flex-1 grid grid-cols-3 md:grid-cols-6 gap-2 max-w-4xl ml-auto">
-          {/* Funds */}
-          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
-            <div className="flex items-center space-x-2">
-              <span className="text-xl">💰</span>
-              <div>
-                <p className="text-xs text-gray-400 font-mono">FUNDS</p>
-                <p className="text-sm font-bold text-neon-green">
-                  {formatCurrency(gameState.funds)}
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Resources grid on the right */}
+          <div className="flex-1 grid grid-cols-3 md:grid-cols-6 gap-3 max-w-5xl ml-auto">
+            <StatCard
+              icon="💰"
+              label="Funds"
+              value={formatCurrency(gameState.funds)}
+              color="neon-green"
+            />
 
-          {/* Power */}
-          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
-            <div className="flex items-center space-x-2">
-              <span className="text-xl">⚡</span>
-              <div>
-                <p className="text-xs text-gray-400 font-mono">POWER</p>
-                <p className={`text-sm font-bold ${getPowerColor(gameState.power)}`}>
-                  {gameState.power}%
-                </p>
-              </div>
-            </div>
-          </div>
+            <PowerCard />
 
-          {/* Satellites */}
-          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
-            <div className="flex items-center space-x-2">
-              <span className="text-xl">🛰️</span>
-              <div>
-                <p className="text-xs text-gray-400 font-mono">SATELLITES</p>
-                <p className="text-sm font-bold text-neon-blue">
-                  {Array.isArray(gameState.satellites) ? gameState.satellites.length : 0} deployed
-                </p>
-              </div>
-            </div>
-          </div>
+            <StatCard
+              icon="🛰️"
+              label="Satellites"
+              value={Array.isArray(gameState.satellites) ? gameState.satellites.length : 0}
+              subValue="deployed"
+              color="neon-blue"
+            />
 
-          {/* Probes */}
-          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
-            <div className="flex items-center space-x-2">
-              <span className="text-xl">🚀</span>
-              <div>
-                <p className="text-xs text-gray-400 font-mono">PROBES</p>
-                <p className="text-sm font-bold text-neon-blue">
-                  {gameState.availableProbes || 0} ready
-                </p>
-                <p className="text-xs text-gray-500">
-                  ({Array.isArray(gameState.probes) ? gameState.probes.length : 0} deployed)
-                </p>
-              </div>
-            </div>
-          </div>
+            <StatCard
+              icon="🚀"
+              label="Probes"
+              value={gameState.availableProbes || 0}
+              subValue={`${Array.isArray(gameState.probes) ? gameState.probes.length : 0} deployed`}
+              color="purple-400"
+            />
 
-          {/* Day */}
-          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
-            <div className="flex items-center space-x-2">
-              <span className="text-xl">📅</span>
-              <div>
-                <p className="text-xs text-gray-400 font-mono">DAY</p>
-                <p className="text-sm font-bold text-white">
-                  {gameState.day}
-                </p>
-              </div>
-            </div>
-          </div>
+            <StatCard
+              icon="📅"
+              label="Day"
+              value={gameState.day}
+              color="gray-300"
+            />
 
-          {/* Score */}
-          <div className="bg-medium-gray rounded-lg p-2 glow-blue">
-            <div className="flex items-center space-x-2">
-              <span className="text-xl">⭐</span>
-              <div>
-                <p className="text-xs text-gray-400 font-mono">SCORE</p>
-                <p className="text-sm font-bold text-neon-yellow">
-                  {gameState.score.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-          </div>
-        </div>
-
-        {/* Earth Damage Bar */}
-        <div className="mt-1">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-mono text-gray-400">EARTH DAMAGE</span>
-            <span className={`text-xs font-bold ${getDamageColor(gameState.earthDamage)}`}>
-              {gameState.earthDamage}%
-            </span>
-          </div>
-          <div className="w-full bg-dark-gray rounded-full h-2">
-            <motion.div
-              className={`h-2 rounded-full ${
-                gameState.earthDamage < 25 ? 'bg-neon-green' :
-                gameState.earthDamage < 50 ? 'bg-neon-yellow' :
-                gameState.earthDamage < 75 ? 'bg-orange-500' : 'bg-neon-red'
-              }`}
-              initial={{ width: 0 }}
-              animate={{ width: `${gameState.earthDamage}%` }}
-              transition={{ duration: 0.5 }}
+            <StatCard
+              icon="⭐"
+              label="Score"
+              value={gameState.score.toLocaleString()}
+              color="neon-yellow"
             />
           </div>
         </div>
