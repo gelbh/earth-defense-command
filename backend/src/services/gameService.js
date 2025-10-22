@@ -159,8 +159,9 @@ class GameService {
       const realMinutes = (distance / velocity) / 60;
       const gameMinutes = realMinutes / 60; // 1 hour in real = 1 minute in game
       
-      // Random approach angle (where it's coming from)
-      const approachAngle = Math.random() * Math.PI * 2;
+      // TRUE 3D APPROACH - spherical coordinates
+      const approachAngle = Math.random() * Math.PI * 2; // Azimuth (0-360°)
+      const polarAngle = (Math.random() - 0.5) * Math.PI; // Elevation (-90° to +90°)
       
       const asteroidId = `SIM-${Date.now()}-${i}`;
       const asteroidName = `(${2000 + Math.floor(Math.random() * 25)}) ${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 999)}`;
@@ -173,10 +174,11 @@ class GameService {
         distance, // Current distance from Earth
         missDistance: Math.random() * 20000 + 5000, // Will it hit? (very close miss distance = likely hit)
         isHazardous,
-        // Approach mechanics
-        approachAngle, // Direction it's coming from (radians)
+        // Approach mechanics - 3D SPHERICAL
+        approachAngle, // Azimuth angle in radians (horizontal plane)
+        polarAngle, // Polar angle in radians (vertical: -π/2=south pole, 0=equator, +π/2=north pole)
         timeToImpact: gameMinutes, // Minutes until impact
-        detectedAt: Date.now(), // When we first saw it
+        detectedAt: (this.gameState.day - 1) * 1440, // Game time when first detected
         impactProbability: this.calculateImpactProbability(diameter, distance)
       };
       
@@ -216,28 +218,70 @@ class GameService {
     return Math.min(0.9, baseProbability); // Cap at 90%
   }
 
-  // Check if an asteroid is detected by any satellite
+  // Calculate 3D position of asteroid
+  calculateAsteroidPosition3D(asteroid, elapsedMinutes) {
+    const approachAngle = asteroid.data?.approachAngle || 0;
+    const polarAngle = asteroid.data?.polarAngle || 0; // Vertical angle for 3D
+    const distance = asteroid.data?.distance || 1000000;
+    const timeToImpact = asteroid.data?.timeToImpact || 24;
+    const detectedAt = asteroid.data?.detectedAt || 0;
+    
+    // Calculate current distance based on approach progress
+    const minutesSinceDetection = Math.max(0, elapsedMinutes - detectedAt);
+    const progress = Math.min(1, minutesSinceDetection / timeToImpact);
+    const currentDistance = distance * (1 - progress);
+    const distanceInGameUnits = currentDistance / 100000; // Scale to game units
+    
+    // Convert spherical coordinates to 3D Cartesian
+    return {
+      x: Math.cos(approachAngle) * Math.cos(polarAngle) * distanceInGameUnits,
+      y: Math.sin(polarAngle) * distanceInGameUnits,
+      z: Math.sin(approachAngle) * Math.cos(polarAngle) * distanceInGameUnits,
+      distance: distanceInGameUnits
+    };
+  }
+
+  // Calculate 3D position of satellite
+  calculateSatellitePosition3D(satellite) {
+    const radius = 2.5; // Satellite orbit radius
+    const angle = satellite.orbitPosition || 0;
+    
+    return {
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle * 2) * 0.2, // Slight vertical variation
+      z: Math.sin(angle) * radius
+    };
+  }
+
+  // Calculate 3D distance between two points
+  distance3D(pos1, pos2) {
+    return Math.sqrt(
+      Math.pow(pos1.x - pos2.x, 2) +
+      Math.pow(pos1.y - pos2.y, 2) +
+      Math.pow(pos1.z - pos2.z, 2)
+    );
+  }
+
+  // Check if an asteroid is detected by any satellite (3D SPHERICAL RADAR)
   isAsteroidDetected(asteroid) {
     if (!asteroid.data) return false;
     
-    // Calculate asteroid's current position in 3D space based on approach angle
-    const approachAngle = asteroid.data.approachAngle || 0;
-    const distance = asteroid.data.distance || 1000000;
+    const elapsedMinutes = (this.gameState.day - 1) * 1440; // Minutes since game start
+    const asteroidPos = this.calculateAsteroidPosition3D(asteroid, elapsedMinutes);
     
-    // Check if within range of any satellite
+    // Always detect asteroids that are very close (emergency detection)
+    if (asteroidPos.distance < 2) return true;
+    
+    // Check if within 3D spherical detection range of any satellite
     for (const satellite of this.gameState.satellites) {
-      const satAngle = satellite.orbitPosition;
-      const detectionRadius = satellite.detectionRadius;
+      const satPos = this.calculateSatellitePosition3D(satellite);
+      const detectionRadius = satellite.detectionRadius || 3.5;
       
-      // Simple angular distance check (more sophisticated in 3D, but this works for gameplay)
-      const angleDiff = Math.abs(satAngle - approachAngle);
-      const normalizedDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
+      // Calculate 3D distance from satellite to asteroid
+      const dist = this.distance3D(satPos, asteroidPos);
       
-      // If asteroid is in this satellite's coverage arc and within radius
-      const coverageArc = Math.PI / 2; // 90 degrees each side
-      const distanceInRange = distance / 100000; // Scale to game units
-      
-      if (normalizedDiff < coverageArc && distanceInRange < detectionRadius) {
+      // If asteroid is within the satellite's spherical detection radius
+      if (dist < detectionRadius) {
         asteroid.detectedBy = satellite.id;
         return true;
       }
@@ -407,18 +451,70 @@ class GameService {
         const avgProbeLevel = this.gameState.probes.length > 0 
           ? this.gameState.probes.reduce((sum, p) => sum + p.level, 0) / this.gameState.probes.length 
           : 1;
+        const avgProbePower = this.gameState.probes.length > 0
+          ? this.gameState.probes.reduce((sum, p) => sum + (p.laserPower || 100), 0) / this.gameState.probes.length
+          : 100;
+        
         let successChance = this.calculateDeflectionSuccess(threat.data);
         successChance = Math.min(0.95, successChance + (avgProbeLevel - 1) * 0.1); // +10% per avg probe level
         const success = Math.random() < successChance;
         
+        const asteroidDiameter = threat.data?.diameter || 50;
+        const powerRatio = avgProbePower / asteroidDiameter; // Higher = more destructive power vs asteroid
+        
+        // Check for FRAGMENTATION instead of complete destruction
+        const willFragment = asteroidDiameter > 100 && powerRatio < 5; // Large asteroids fragment if probe power is insufficient
+        
         if (success) {
-          result.success = true;
-          result.message = `Successfully deflected ${threat.data.name}`;
-          result.scoreChange = 300;
-          this.gameState.reputation += 10;
-          
-          // Remove threat
-          this.gameState.threats = this.gameState.threats.filter(t => t.id !== targetId);
+          if (willFragment) {
+            // PARTIAL DESTRUCTION - create fragments
+            const fragmentCount = Math.floor(Math.random() * 2) + 2; // 2-3 fragments
+            const fragments = [];
+            
+            for (let i = 0; i < fragmentCount; i++) {
+              const fragmentDiameter = asteroidDiameter / (fragmentCount + Math.random());
+              const fragmentThreat = {
+                id: `${threat.id}-frag-${i}`,
+                type: 'asteroid_detected',
+                severity: fragmentDiameter > 50 ? 'moderate' : 'low',
+                title: `💥 ${threat.data.name} Fragment ${i+1}`,
+                description: `Deflection partially successful - asteroid broke into ${fragmentCount} smaller pieces`,
+                timestamp: new Date().toISOString(),
+                data: {
+                  ...threat.data,
+                  name: `${threat.data.name} Fragment ${i+1}`,
+                  diameter: fragmentDiameter,
+                  distance: threat.data.distance * 1.2, // Fragments scatter slightly further
+                  approachAngle: threat.data.approachAngle + (Math.random() - 0.5) * 0.5, // Scatter angle
+                  timeToImpact: threat.data.timeToImpact * 1.5, // More time to deal with fragments
+                  velocity: threat.data.velocity * 0.8 // Slower
+                },
+                risk: fragmentDiameter > 50 ? 'moderate' : 'low'
+              };
+              fragments.push(fragmentThreat);
+            }
+            
+            // Remove original, add fragments
+            this.gameState.threats = this.gameState.threats.filter(t => t.id !== targetId);
+            this.gameState.threats.push(...fragments);
+            
+            result.success = true;
+            result.fragmented = true;
+            result.fragmentCount = fragmentCount;
+            result.message = `Partially deflected ${threat.data.name} - broke into ${fragmentCount} smaller fragments!`;
+            result.scoreChange = 150;
+            this.gameState.reputation += 3;
+          } else {
+            // COMPLETE DESTRUCTION
+            result.success = true;
+            result.fragmented = false;
+            result.message = `Successfully destroyed ${threat.data.name}!`;
+            result.scoreChange = 300;
+            this.gameState.reputation += 10;
+            
+            // Remove threat
+            this.gameState.threats = this.gameState.threats.filter(t => t.id !== targetId);
+          }
         } else {
           result.success = false;
           result.message = `Failed to deflect ${threat.data.name}`;

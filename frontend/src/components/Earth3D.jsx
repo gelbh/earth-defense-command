@@ -233,10 +233,14 @@ function AsteroidMarker({ threat, index, onDeflect }) {
       // Linear approach toward Earth
       const currentDistance = startDistance - (startDistance - earthRadius) * progress;
       
-      // Position along approach vector
-      const x = Math.cos(approachAngle) * currentDistance;
-      const z = Math.sin(approachAngle) * currentDistance;
-      const y = Math.sin(approachAngle * 0.5) * 0.3; // Slight vertical variation
+      // Position using 3D SPHERICAL COORDINATES
+      // Get polar angle from data or generate from index
+      const polar = threat.data?.polarAngle !== undefined ? threat.data.polarAngle : (Math.random() - 0.5) * Math.PI;
+      
+      // Convert spherical (r, azimuth, polar) to Cartesian (x, y, z)
+      const x = Math.cos(approachAngle) * Math.cos(polar) * currentDistance;
+      const y = Math.sin(polar) * currentDistance;
+      const z = Math.sin(approachAngle) * Math.cos(polar) * currentDistance;
       
       markerRef.current.position.x = x;
       markerRef.current.position.z = z;
@@ -472,25 +476,26 @@ function Satellite({ satellite, index, onUpgrade }) {
 
   return (
     <group ref={satelliteRef}>
-      {/* Detection Radius Circle - always visible */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <ringGeometry args={[detectionRadius - 0.1, detectionRadius, 64]} />
+      {/* 3D Detection Sphere - Wireframe */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[detectionRadius, 32, 32]} />
         <meshBasicMaterial 
           color="#00d4ff" 
+          wireframe
           transparent 
-          opacity={hovered ? 0.3 : 0.15} 
-          side={THREE.DoubleSide}
+          opacity={hovered ? 0.4 : 0.2} 
         />
       </mesh>
       
-      {/* Radar sweep effect */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <circleGeometry args={[detectionRadius, 64]} />
+      {/* Inner detection sphere - subtle fill */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[detectionRadius, 32, 32]} />
         <meshBasicMaterial 
           color="#00d4ff" 
           transparent 
-          opacity={0.05} 
+          opacity={hovered ? 0.08 : 0.03} 
           side={THREE.DoubleSide}
+          depthWrite={false}
         />
       </mesh>
       
