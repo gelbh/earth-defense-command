@@ -484,6 +484,73 @@ function Satellite({ satellite, index, onUpgrade }) {
   );
 }
 
+// Laser Beam component
+function LaserBeam({ startPosition, endPosition, level = 1, intensity = 1 }) {
+  const beamRef = useRef();
+  
+  // Calculate beam color and thickness based on level
+  const getBeamColor = (level) => {
+    switch(level) {
+      case 1: return '#00ff88'; // Green - basic
+      case 2: return '#00d4ff'; // Blue - improved
+      case 3: return '#ff00ff'; // Magenta - max power
+      default: return '#00ff88';
+    }
+  };
+  
+  const beamThickness = 0.02 + (level * 0.015); // Thicker at higher levels
+  const color = getBeamColor(level);
+  
+  // Animate intensity
+  useFrame(({ clock }) => {
+    if (beamRef.current) {
+      const pulse = Math.sin(clock.getElapsedTime() * 10) * 0.3 + 0.7;
+      beamRef.current.material.opacity = intensity * pulse;
+    }
+  });
+  
+  // Calculate distance and midpoint
+  const start = new THREE.Vector3(...startPosition);
+  const end = new THREE.Vector3(...endPosition);
+  const direction = new THREE.Vector3().subVectors(end, start);
+  const distance = direction.length();
+  const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+  
+  // Create rotation to point towards target
+  const quaternion = new THREE.Quaternion();
+  quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    direction.clone().normalize()
+  );
+  
+  return (
+    <group position={midpoint} quaternion={quaternion}>
+      {/* Main beam */}
+      <mesh ref={beamRef}>
+        <cylinderGeometry args={[beamThickness, beamThickness * 0.5, distance, 8]} />
+        <meshBasicMaterial 
+          color={color} 
+          transparent 
+          opacity={0.8}
+        />
+      </mesh>
+      
+      {/* Core glow */}
+      <mesh>
+        <cylinderGeometry args={[beamThickness * 0.3, beamThickness * 0.15, distance, 8]} />
+        <meshBasicMaterial 
+          color="#ffffff" 
+          transparent 
+          opacity={0.9}
+        />
+      </mesh>
+      
+      {/* Particles at impact point */}
+      <pointLight position={[0, distance / 2, 0]} intensity={level * 2} color={color} distance={1} />
+    </group>
+  );
+}
+
 // Probe component with laser capabilities
 function Probe({ probe, index, onUpgrade }) {
   const probeRef = useRef();
@@ -614,7 +681,7 @@ function ResearchStation({ index }) {
 }
 
 // Main 3D Scene
-function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade }) {
+function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade, activeLasers = [] }) {
   return (
     <>
       {/* Ambient light for overall illumination */}
@@ -700,6 +767,17 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade }) {
         />
       ))}
       
+      {/* Active laser beams */}
+      {activeLasers.map((laser) => (
+        <LaserBeam
+          key={`laser-${laser.probeId}-${laser.targetId}`}
+          startPosition={laser.startPosition}
+          endPosition={laser.endPosition}
+          level={laser.level}
+          intensity={laser.intensity}
+        />
+      ))}
+      
       {/* Camera controls */}
       <OrbitControls
         enablePan={false}
@@ -715,6 +793,104 @@ function Scene({ threats, gameState, onDeflectAsteroid, onUpgrade }) {
 
 // Main Earth3D component
 const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onUpgrade = null }) => {
+  const [activeLasers, setActiveLasers] = useState([]);
+  
+  // Wrapper for deflect that shows laser beam
+  const handleDeflectWithLaser = async (threat) => {
+    if (!onDeflectAsteroid || !gameState) return;
+    
+    // Find nearest probe to the asteroid
+    const asteroidPosition = calculateAsteroidPosition(threat);
+    const nearestProbe = findNearestProbe(gameState.probes, asteroidPosition);
+    
+    if (!nearestProbe) {
+      // No probe available, just deflect
+      return onDeflectAsteroid(threat);
+    }
+    
+    // Calculate probe position
+    const probePosition = calculateProbePosition(nearestProbe);
+    
+    // Show laser beam
+    const laserId = `${nearestProbe.id}-${threat.id}-${Date.now()}`;
+    setActiveLasers(prev => [...prev, {
+      id: laserId,
+      probeId: nearestProbe.id,
+      targetId: threat.id,
+      startPosition: probePosition,
+      endPosition: asteroidPosition,
+      level: nearestProbe.level || 1,
+      intensity: 1
+    }]);
+    
+    // Wait for laser animation (500ms)
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Execute deflection
+    const result = await onDeflectAsteroid(threat);
+    
+    // Keep laser for another 300ms
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Remove laser
+    setActiveLasers(prev => prev.filter(l => l.id !== laserId));
+    
+    return result;
+  };
+  
+  // Helper to calculate asteroid position based on approach data
+  const calculateAsteroidPosition = (threat) => {
+    if (!threat?.data) return [0, 0, 0];
+    
+    const { approachAngle = 0, distance = 1000000, timeToImpact = 24, detectedAt = 0 } = threat.data;
+    const elapsedMinutes = (gameState?.day || 0) * 1440;
+    const minutesSinceDetection = Math.max(0, elapsedMinutes - detectedAt);
+    const progress = minutesSinceDetection / timeToImpact;
+    const currentDistance = distance * (1 - progress);
+    const distanceInGameUnits = currentDistance / 100000;
+    
+    return [
+      Math.cos(approachAngle) * distanceInGameUnits,
+      Math.sin(approachAngle * 0.5) * distanceInGameUnits * 0.3,
+      Math.sin(approachAngle) * distanceInGameUnits
+    ];
+  };
+  
+  // Helper to find nearest probe
+  const findNearestProbe = (probes, asteroidPosition) => {
+    if (!Array.isArray(probes) || probes.length === 0) return null;
+    
+    let nearest = probes[0];
+    let minDistance = Infinity;
+    
+    probes.forEach(probe => {
+      const probePos = calculateProbePosition(probe);
+      const dist = Math.sqrt(
+        Math.pow(probePos[0] - asteroidPosition[0], 2) +
+        Math.pow(probePos[1] - asteroidPosition[1], 2) +
+        Math.pow(probePos[2] - asteroidPosition[2], 2)
+      );
+      if (dist < minDistance) {
+        minDistance = dist;
+        nearest = probe;
+      }
+    });
+    
+    return nearest;
+  };
+  
+  // Helper to calculate probe position in orbit
+  const calculateProbePosition = (probe) => {
+    const radius = 2.8;
+    const angle = probe.orbitPosition || 0;
+    
+    return [
+      Math.cos(angle) * radius,
+      Math.cos(angle * 1.5) * 0.3,
+      Math.sin(angle) * radius
+    ];
+  };
+  
   return (
     <div className="w-full h-full bg-black rounded-lg overflow-hidden relative">
       <Canvas
@@ -724,8 +900,9 @@ const Earth3D = ({ threats = [], gameState = null, onDeflectAsteroid = null, onU
         <Scene 
           threats={threats} 
           gameState={gameState} 
-          onDeflectAsteroid={onDeflectAsteroid} 
+          onDeflectAsteroid={handleDeflectWithLaser} 
           onUpgrade={onUpgrade}
+          activeLasers={activeLasers}
         />
       </Canvas>
     </div>
