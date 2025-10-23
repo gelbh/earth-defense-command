@@ -197,13 +197,65 @@ function BurnupEffect({ position, intensity = 1 }) {
   );
 }
 
+// Detection glow component - pulsing effect when asteroid is detected
+function DetectionGlow({ size, color, severity }) {
+  const glowRef = useRef();
+  
+  useFrame(({ clock }) => {
+    if (glowRef.current) {
+      // Pulse speed varies by severity
+      const speed = severity === 'critical' ? 3 : severity === 'moderate' ? 2 : 1.5;
+      const pulse = Math.sin(clock.getElapsedTime() * speed) * 0.5 + 0.5; // 0 to 1
+      
+      // Base opacity varies by severity
+      const baseOpacity = severity === 'critical' ? 0.3 : severity === 'moderate' ? 0.2 : 0.15;
+      glowRef.current.material.opacity = baseOpacity + pulse * 0.15;
+      
+      // Subtle scale pulse
+      const scale = 1 + pulse * 0.1;
+      glowRef.current.scale.set(scale, scale, scale);
+    }
+  });
+  
+  return (
+    <>
+      {/* Outer glow sphere */}
+      <mesh ref={glowRef}>
+        <sphereGeometry args={[size * 2, 16, 16]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.2}
+          side={THREE.BackSide}
+        />
+      </mesh>
+      
+      {/* Inner glow ring - perpendicular to camera */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[size * 1.5, size * 1.8, 32]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.3}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </>
+  );
+}
+
 // Asteroid marker component - APPROACHING Earth (not orbiting)
-function AsteroidMarker({ threat, index, onDeflect, onImpact, isPaused = false }) {
+function AsteroidMarker({ threat, index, onDeflect, onImpact, isPaused = false, satellites = [] }) {
   const markerRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [burnedUp, setBurnedUp] = useState(false);
   const [showBurnup, setShowBurnup] = useState(false);
   const impactTriggeredRef = useRef(false); // Track if impact already triggered
+  
+  // Live updating stats for tooltip
+  const [currentDistance, setCurrentDistance] = useState(0);
+  const [timeToImpact, setTimeToImpact] = useState(0);
+  const [isDetected, setIsDetected] = useState(false);
   
   // Timestamp-based animation
   const startTimeRef = useRef(Date.now());
@@ -257,14 +309,56 @@ function AsteroidMarker({ threat, index, onDeflect, onImpact, isPaused = false }
       // Distance = velocity * time (scaled for gameplay: 1 real second = 1000 game seconds)
       const timeScale = 1000; // Speed up asteroid movement for gameplay
       const distanceTraveled = (velocity * elapsedSeconds * timeScale) / GAME_UNIT_KM;
-      const currentDistance = Math.max(earthRadius, startDistance - distanceTraveled);
+      const calculatedDistance = Math.max(earthRadius, startDistance - distanceTraveled);
       
       // Position using 3D SPHERICAL COORDINATES
-      const x = Math.cos(approachAngle) * Math.cos(polarAngle) * currentDistance;
-      const y = Math.sin(polarAngle) * currentDistance;
-      const z = Math.sin(approachAngle) * Math.cos(polarAngle) * currentDistance;
+      const x = Math.cos(approachAngle) * Math.cos(polarAngle) * calculatedDistance;
+      const y = Math.sin(polarAngle) * calculatedDistance;
+      const z = Math.sin(approachAngle) * Math.cos(polarAngle) * calculatedDistance;
       
       markerRef.current.position.set(x, y, z);
+      
+      // Update live stats for tooltip (convert to km for display)
+      const distanceKm = (calculatedDistance - earthRadius) * GAME_UNIT_KM;
+      setCurrentDistance(distanceKm);
+      
+      // Calculate time to impact (in minutes)
+      const remainingDistance = distanceKm;
+      const timeToImpactSeconds = remainingDistance / (velocity * timeScale);
+      const timeToImpactMinutes = timeToImpactSeconds / 60;
+      setTimeToImpact(timeToImpactMinutes);
+      
+      // Check if detected by any satellite
+      let detected = false;
+      const satelliteOrbitRadius = 2.5;
+      const satelliteSpeed = 0.8;
+      
+      for (const satellite of satellites) {
+        // Calculate satellite position (same logic as Satellite component)
+        const satTime = elapsedSeconds * satelliteSpeed + (satellite.orbitPosition || 0);
+        const satX = Math.cos(satTime) * satelliteOrbitRadius;
+        const satY = Math.sin(satTime * 2) * 0.2;
+        const satZ = Math.sin(satTime) * satelliteOrbitRadius;
+        
+        // 3D distance between asteroid and satellite
+        const dx = x - satX;
+        const dy = y - satY;
+        const dz = z - satZ;
+        const distance3D = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        
+        const detectionRadius = satellite.detectionRadius || 3.5;
+        if (distance3D <= detectionRadius) {
+          detected = true;
+          break;
+        }
+      }
+      
+      // Emergency detection for close asteroids
+      if (calculatedDistance <= 2.5) {
+        detected = true;
+      }
+      
+      setIsDetected(detected);
       
       // Rotation
       const rotationSpeed = hovered ? 0.001 : 0.01;
@@ -272,7 +366,7 @@ function AsteroidMarker({ threat, index, onDeflect, onImpact, isPaused = false }
       markerRef.current.rotation.y += rotationSpeed * 0.5;
       
       // Check for atmospheric burnup (small asteroids burn up < 25m diameter)
-      if (currentDistance <= atmosphereRadius && diameter < 25 && !impactTriggeredRef.current) {
+      if (calculatedDistance <= atmosphereRadius && diameter < 25 && !impactTriggeredRef.current) {
         setShowBurnup(true);
         setTimeout(() => {
           setBurnedUp(true);
@@ -280,7 +374,7 @@ function AsteroidMarker({ threat, index, onDeflect, onImpact, isPaused = false }
       }
       
       // Check if asteroid reached Earth (impact!)
-      if (currentDistance <= earthRadius && !hovered && diameter >= 25 && !impactTriggeredRef.current) {
+      if (calculatedDistance <= earthRadius && !hovered && diameter >= 25 && !impactTriggeredRef.current) {
         console.warn(`💥 Asteroid ${threat.title} IMPACT! Processing damage...`);
         impactTriggeredRef.current = true; // Prevent multiple impacts
         
@@ -378,15 +472,25 @@ function AsteroidMarker({ threat, index, onDeflect, onImpact, isPaused = false }
       <mesh geometry={asteroidGeometry}>
         <meshStandardMaterial
           color={getColor()}
-          emissive={hovered ? getGlowColor() : '#3a2f25'}
-          emissiveIntensity={hovered ? 0.3 : 0.15}
+          emissive={hovered ? getGlowColor() : (isDetected ? getGlowColor() : '#3a2f25')}
+          emissiveIntensity={hovered ? 0.4 : (isDetected ? 0.25 : 0.15)}
           roughness={0.9}
           metalness={0.1}
         />
       </mesh>
       
-      {/* Point light to make asteroid more visible */}
-      <pointLight position={[0, 0, 0]} intensity={0.5} color="#ffffff" distance={0.5} />
+      {/* Point light to make asteroid more visible - brighter when detected */}
+      <pointLight 
+        position={[0, 0, 0]} 
+        intensity={isDetected ? 0.8 : 0.5} 
+        color={isDetected ? getGlowColor() : "#ffffff"} 
+        distance={0.5} 
+      />
+      
+      {/* Detection glow - pulsing sphere when detected by satellite */}
+      {isDetected && !hovered && (
+        <DetectionGlow size={getSize()} color={getGlowColor()} severity={threat.severity} />
+      )}
       
       {/* Selection ring when hovered */}
       {hovered && (
@@ -410,7 +514,7 @@ function AsteroidMarker({ threat, index, onDeflect, onImpact, isPaused = false }
         />
       )}
       
-      {/* Tooltip on hover */}
+      {/* Tooltip - Shows ONLY on hover with live updating data */}
       {hovered && (
         <Html 
           distanceFactor={15}
@@ -425,6 +529,17 @@ function AsteroidMarker({ threat, index, onDeflect, onImpact, isPaused = false }
             <div className="text-orange-400" style={{ fontSize: '7px' }}>{threat.severity.toUpperCase()}</div>
             {diameter && <div className="text-gray-300" style={{ fontSize: '7px' }}>Ø {Math.round(diameter)}m</div>}
             {velocity && <div className="text-blue-400" style={{ fontSize: '7px' }}>🚀 {velocity.toFixed(1)} km/s</div>}
+            
+            {/* Live updating distance */}
+            <div className="text-cyan-400 mt-0.5 pt-0.5 border-t border-gray-700" style={{ fontSize: '7px' }}>
+              📏 {currentDistance >= 1000 ? (currentDistance / 1000).toFixed(1) + 'K km' : Math.round(currentDistance) + ' km'}
+            </div>
+            
+            {/* Live updating time to impact */}
+            <div className="text-yellow-300" style={{ fontSize: '7px' }}>
+              ⏱️ {timeToImpact >= 1 ? timeToImpact.toFixed(1) + ' min' : (timeToImpact * 60).toFixed(0) + ' sec'}
+            </div>
+            
             {diameter < 25 && (
               <div className="text-yellow-400 mt-0.5 pt-0.5 border-t border-gray-700" style={{ fontSize: '7px' }}>
                 🔥 Will burn up in atmosphere
@@ -435,18 +550,6 @@ function AsteroidMarker({ threat, index, onDeflect, onImpact, isPaused = false }
             </div>
           </div>
         </Html>
-      )}
-      
-      {/* Pulsing outer glow - only visible for critical threats */}
-      {threat.severity === 'critical' && (
-        <Sphere args={[getSize() * 1.5, 16, 16]}>
-          <meshBasicMaterial
-            color={getGlowColor()}
-            transparent
-            opacity={0.2}
-            side={THREE.BackSide}
-          />
-        </Sphere>
       )}
     </group>
   );
@@ -969,6 +1072,7 @@ function Scene({ threats, gameState, onDeflectAsteroid, onImpact, onUpgrade, act
           onDeflect={onDeflectAsteroid}
           onImpact={onImpact}
           isPaused={isPaused}
+          satellites={gameState?.satellites || []}
         />
       ))}
       
