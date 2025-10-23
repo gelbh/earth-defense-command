@@ -16,7 +16,6 @@ const gameReducer = (state, action) => {
         power: action.payload.power ?? state.power,
         satellites: action.payload.satellites ?? state.satellites,
         probes: action.payload.probes ?? state.probes,
-        researchTeams: action.payload.researchTeams ?? state.researchTeams,
       };
     
     case 'ADD_EVENT':
@@ -60,7 +59,6 @@ const gameReducer = (state, action) => {
         power: 100,
         satellites: 3,
         probes: 2,
-        researchTeams: 1,
         upgrades: {
           aiTracking: false,
           improvedRadar: false,
@@ -86,7 +84,6 @@ const initialState = {
   power: 100,
   satellites: 3,
   probes: 2,
-  researchTeams: 1,
   upgrades: {
     aiTracking: false,
     improvedRadar: false,

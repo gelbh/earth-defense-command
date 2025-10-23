@@ -10,7 +10,6 @@ class GameService {
       satellites: [], // Array of deployed satellites with properties
       probes: [], // Array of deployed probes with properties
       availableProbes: 2, // Probes available for deflection missions
-      researchTeams: 1, // Active research teams
       upgrades: {
         aiTracking: false,
         improvedRadar: false,
@@ -508,17 +507,6 @@ class GameService {
         result.scoreChange = 100;
         break;
 
-      case "research":
-        if (this.gameState.researchTeams <= 0) {
-          result.message = "No research teams available";
-          break;
-        }
-        this.gameState.funds -= 50000;
-        result.success = true;
-        result.message = "Research initiated";
-        result.scoreChange = 25;
-        break;
-
       case "deflect_asteroid":
         const threat = this.gameState.threats.find((t) => t.id === targetId);
         if (!threat) {
@@ -957,7 +945,6 @@ class GameService {
       satellites: [], // Array of deployed satellites with properties
       probes: [], // Array of deployed probes with properties
       availableProbes: 2, // Probes available for deflection missions
-      researchTeams: 1,
       upgrades: {
         aiTracking: false,
         improvedRadar: false,

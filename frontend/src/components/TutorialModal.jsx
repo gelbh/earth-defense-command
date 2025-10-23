@@ -59,10 +59,6 @@ const TutorialModal = ({ onClose }) => {
                 <p className="text-gray-300">Position probes for deflection. Costs $100K. Essential for defending Earth.</p>
               </div>
               <div>
-                <p className="font-bold text-neon-yellow mb-1">🔬 Research</p>
-                <p className="text-gray-300">Improve detection and defense. Costs $50K. Increases success rates.</p>
-              </div>
-              <div>
                 <p className="font-bold text-purple-500 mb-1">⚡ Upgrades</p>
                 <p className="text-gray-300">Purchase permanent improvements. Unlock powerful abilities.</p>
               </div>

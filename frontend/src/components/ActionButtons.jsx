@@ -100,22 +100,6 @@ const ActionButtons = ({ gameState, onUpgradeClick }) => {
           variants={buttonVariants}
           whileHover="hover"
           whileTap="tap"
-          onClick={() => handleAction('research')}
-          disabled={loading || gameState.funds < 50000}
-          className={`p-1.5 rounded font-mono text-xs font-bold transition-all ${
-            gameState.funds < 50000
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              : 'bg-neon-yellow hover:bg-yellow-500 text-black glow-yellow'
-          }`}
-        >
-          <div className="text-sm">🔬</div>
-          <div className="text-xs leading-tight">Research</div>
-        </motion.button>
-
-        <motion.button
-          variants={buttonVariants}
-          whileHover="hover"
-          whileTap="tap"
           onClick={onUpgradeClick}
           className="p-1.5 rounded font-mono text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white glow-blue transition-all"
         >

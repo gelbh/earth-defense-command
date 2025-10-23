@@ -1220,44 +1220,6 @@ function Probe({
   );
 }
 
-// Research Station (shown when research teams are active)
-function ResearchStation({ index }) {
-  const stationRef = useRef();
-  const radius = 2.3;
-  const angle = (index * Math.PI * 2) / 3; // Fixed position
-
-  useFrame(() => {
-    if (stationRef.current) {
-      stationRef.current.rotation.y += 0.005;
-    }
-  });
-
-  return (
-    <group
-      ref={stationRef}
-      position={[Math.cos(angle) * radius, 0, Math.sin(angle) * radius]}
-    >
-      {/* Station core */}
-      <mesh>
-        <sphereGeometry args={[0.1, 16, 16]} />
-        <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.2} />
-      </mesh>
-      {/* Ring modules */}
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.15, 0.02, 8, 16]} />
-        <meshStandardMaterial color="#ffaa00" metalness={0.6} />
-      </mesh>
-      {/* Glow */}
-      <pointLight
-        position={[0, 0, 0]}
-        intensity={0.3}
-        color="#ffd700"
-        distance={0.6}
-      />
-    </group>
-  );
-}
-
 // Main 3D Scene
 function Scene({
   threats,
@@ -1342,11 +1304,6 @@ function Scene({
             isPaused={isPaused}
             onPositionUpdate={onProbePositionUpdate}
           />
-        ))}
-      {/* Research Stations */}
-      {gameState &&
-        Array.from({ length: gameState.researchTeams }).map((_, index) => (
-          <ResearchStation key={`research-${index}`} index={index} />
         ))}
       {/* Upgrade Effects - AI Tracking Network */}
       {gameState?.upgrades?.aiTracking && (
