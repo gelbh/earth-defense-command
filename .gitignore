@@ -35,3 +35,7 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+
+# Plan
+LEVEL_SYSTEM_PLAN.md
+PHASE_1_COMPLETE.md
