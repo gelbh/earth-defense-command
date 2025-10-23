@@ -43,11 +43,11 @@ const PreLevelBriefing = ({ level, onLaunch, onBack }) => {
   }
 
   return (
-    <div className="min-h-screen bg-space-blue flex items-center justify-center p-8">
+    <div className="min-h-screen bg-space-blue flex justify-center p-8 overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="max-w-4xl w-full bg-black bg-opacity-80 rounded-lg border-2 border-neon-blue p-8 font-mono"
+        className="max-w-4xl w-full bg-black bg-opacity-80 rounded-lg border-2 border-neon-blue p-8 font-mono my-auto"
       >
         {/* Header */}
         <div className="text-center mb-6">
