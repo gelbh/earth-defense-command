@@ -3,11 +3,15 @@ import nasaService from '../services/nasaService.js';
 
 export const getEvents = async (req, res) => {
   try {
+    console.log('Generating new events...');
     const events = await gameService.generateEvents();
+    console.log(`Generated ${events.length} events`);
+    const gameState = gameService.getGameState();
+    console.log(`Game state now has ${gameState.threats.length} threats`);
     res.json({
       success: true,
       events: events,
-      gameState: gameService.getGameState()
+      gameState: gameState
     });
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -21,12 +25,6 @@ export const getEvents = async (req, res) => {
 
 export const getGameState = async (req, res) => {
   try {
-    // Generate initial events if there are none
-    const currentState = gameService.getGameState();
-    if (currentState.threats.length === 0 && currentState.events.length === 0) {
-      await gameService.generateEvents();
-    }
-    
     const gameState = gameService.getGameState();
     res.json({
       success: true,

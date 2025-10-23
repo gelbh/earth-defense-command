@@ -38,7 +38,7 @@ export const getAsteroidDetails = async (req, res) => {
     }
 
     // For now, we'll get all asteroids and find the one with matching ID
-    // In a real implementation, you might want to cache individual asteroid details
+    // In a real implementation, we might want to cache individual asteroid details
     const asteroids = await nasaService.getNearEarthObjects(30);
     const asteroid = asteroids.find(a => a.id === id);
 

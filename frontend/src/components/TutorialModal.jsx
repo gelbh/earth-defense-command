@@ -27,7 +27,7 @@ const TutorialModal = ({ onClose }) => {
             <div className="bg-medium-gray rounded-lg p-4 border border-neon-blue/30">
               <h3 className="text-xl font-bold text-neon-blue mb-3 font-mono">🎯 Objective</h3>
               <ul className="space-y-2 text-sm text-gray-300">
-                <li>• Keep Earth's damage below 100%</li>
+                <li>• Keep Earth's health above 0%</li>
                 <li>• Survive as many days as possible</li>
                 <li>• Maximize your score</li>
                 <li>• Build your reputation</li>
@@ -77,11 +77,11 @@ const TutorialModal = ({ onClose }) => {
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center">
                   <span className="w-3 h-3 bg-neon-red rounded-full mr-2"></span>
-                  <span className="text-neon-red font-bold">Critical:</span> <span className="ml-2">15% damage if ignored</span>
+                  <span className="text-neon-red font-bold">Critical:</span> <span className="ml-2">15% health loss if ignored</span>
                 </div>
                 <div className="flex items-center">
                   <span className="w-3 h-3 bg-orange-500 rounded-full mr-2"></span>
-                  <span className="text-orange-500 font-bold">Moderate:</span> <span className="ml-2">8% damage if ignored</span>
+                  <span className="text-orange-500 font-bold">Moderate:</span> <span className="ml-2">8% health loss if ignored</span>
                 </div>
                 <div className="flex items-center">
                   <span className="w-3 h-3 bg-neon-yellow rounded-full mr-2"></span>
@@ -89,7 +89,7 @@ const TutorialModal = ({ onClose }) => {
                 </div>
               </div>
               <p className="mt-3 bg-neon-red/20 border border-neon-red p-2 rounded">
-                <span className="font-bold">⚠️ Important:</span> Click any threat to view details and <span className="text-neon-green font-bold">DEFLECT</span> it with a probe (costs $200K + 1 probe). Deflection can fail based on asteroid size/speed!
+                <span className="font-bold">⚠️ Important:</span> Click any threat to view details and <span className="text-neon-green font-bold">DEFLECT</span> it with a probe (costs 1 probe). Deflection can fail based on asteroid size/speed!
               </p>
             </div>
           </div>
@@ -111,8 +111,8 @@ const TutorialModal = ({ onClose }) => {
             <h3 className="text-xl font-bold text-orange-500 mb-3 font-mono">⏭️ Day Cycle</h3>
             <p className="text-sm text-gray-300 mb-2">When you click <span className="text-orange-500 font-bold">"Advance Day"</span>:</p>
             <ul className="space-y-1 text-sm text-gray-300">
-              <li>• Unhandled threats damage Earth</li>
-              <li>• Resources restore (+1 satellite, +1 probe, +20% power)</li>
+              <li>• Unhandled threats reduce Earth's health</li>
+              <li>• Resources restore (+1 probe, +20% power)</li>
               <li>• You gain funds (+$50K + reputation bonus)</li>
               <li>• New threats appear</li>
             </ul>

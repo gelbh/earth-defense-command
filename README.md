@@ -38,6 +38,7 @@ npm install
 ### Setup
 
 Create `backend/.env`:
+
 ```env
 NASA_API_KEY=DEMO_KEY
 PORT=5000
@@ -66,10 +67,12 @@ Open [http://localhost:5173](http://localhost:5173) and play!
 5. **Advance Days** - Process threats and restore resources
 
 **Controls:**
+
 - Drag to rotate camera
 - Scroll to zoom
 - Click asteroids to deflect
 - Click satellites/probes to upgrade
+- Game auto-pauses when you tab away
 
 ## 📁 Project Structure
 
@@ -93,12 +96,14 @@ earth-defense-command/
 ## 🔗 API Endpoints
 
 **Game:**
+
 - `GET /api/events` - Generate asteroid events
 - `GET /api/events/state` - Get game state
 - `POST /api/events/action` - Deploy, deflect, upgrade
 - `POST /api/events/advance-day` - Next day
 
 **NASA:**
+
 - `GET /api/neo/asteroids` - Real asteroid data
 
 ## 🤝 Contributing

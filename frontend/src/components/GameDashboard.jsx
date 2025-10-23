@@ -109,7 +109,7 @@ const GameDashboard = () => {
       )}
 
       {/* Game Over Overlay */}
-      {gameState.earthDamage >= 100 && (
+      {gameState.earthHealth <= 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -118,7 +118,7 @@ const GameDashboard = () => {
           <div className="text-center">
             <div className="text-neon-red text-8xl mb-4">💥</div>
             <h2 className="text-4xl font-bold text-neon-red mb-4">MISSION FAILED</h2>
-            <p className="text-xl text-white mb-6">Earth has sustained too much damage</p>
+            <p className="text-xl text-white mb-6">Earth's health has reached critical levels</p>
             <p className="text-lg text-gray-300 mb-8">Final Score: {gameState.score}</p>
             <button
               onClick={async () => {
