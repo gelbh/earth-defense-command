@@ -1422,7 +1422,6 @@ const Earth3D = ({
 }) => {
   const [activeLasers, setActiveLasers] = useState([]);
   const [impactFlashes, setImpactFlashes] = useState([]);
-  const [isHovered, setIsHovered] = useState(false);
   const [isTabVisible, setIsTabVisible] = useState(true);
 
   // Track real-time probe positions for accurate laser targeting
@@ -1441,8 +1440,8 @@ const Earth3D = ({
     };
   }, []);
 
-  // Combine hover and tab visibility to determine pause state
-  const isPaused = !isTabVisible || isHovered;
+  // Only pause when tab is not visible (not on hover anymore)
+  const isPaused = !isTabVisible;
 
   // Callback for probes to update their positions
   const handleProbePositionUpdate = useCallback((probeId, position) => {
@@ -1658,11 +1657,7 @@ const Earth3D = ({
   };
 
   return (
-    <div
-      className="w-full h-full bg-black rounded-lg overflow-hidden relative"
-      onPointerEnter={() => setIsHovered(true)}
-      onPointerLeave={() => setIsHovered(false)}
-    >
+    <div className="w-full h-full bg-black rounded-lg overflow-hidden relative">
       <Canvas
         camera={{ position: [0, 3, 8], fov: 50 }}
         gl={{ antialias: true, alpha: false }}
