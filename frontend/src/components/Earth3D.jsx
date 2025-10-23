@@ -269,6 +269,9 @@ function AsteroidMarker({
   const [showBurnup, setShowBurnup] = useState(false);
   const impactTriggeredRef = useRef(false); // Track if impact already triggered
 
+  // Get camera for zoom-based scaling
+  const { camera } = useThree();
+
   // Live updating stats for tooltip
   const [currentDistance, setCurrentDistance] = useState(0);
   const [timeToImpact, setTimeToImpact] = useState(0);
@@ -593,75 +596,104 @@ function AsteroidMarker({
       )}
 
       {/* Tooltip - Shows ONLY on hover with live updating data */}
-      {hovered && (
-        <Html
-          distanceFactor={15}
-          position={[getSize() * 3, 0, 0]}
-          style={{
-            transform: "translate(10px, -50%)",
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            className="bg-black/95 text-white px-1.5 py-0.5 rounded border border-neon-red font-mono shadow-lg"
-            style={{ fontSize: "8px", maxWidth: "140px" }}
-          >
-            <div
-              className="font-bold text-neon-red mb-0.5 truncate"
-              style={{ fontSize: "9px" }}
+      {hovered &&
+        (() => {
+          // Calculate scale based on camera distance (default camera at ~8.5 units)
+          const cameraDistance = camera.position.length();
+          const defaultDistance = 8.5;
+          const zoomScale = cameraDistance / defaultDistance;
+
+          // Adjust distanceFactor and font sizes based on zoom (reduced for better fit)
+          const scaledDistanceFactor = 8 * zoomScale;
+          const baseFontSize = 6 * zoomScale;
+          const titleFontSize = 7 * zoomScale;
+          const smallFontSize = 5.5 * zoomScale;
+
+          return (
+            <Html
+              distanceFactor={scaledDistanceFactor}
+              position={[getSize() * 3, 0, 0]}
+              style={{
+                transform: "translate(10px, -50%)",
+                pointerEvents: "none",
+              }}
             >
-              ⚠️ {threat.data?.name || threat.title}
-            </div>
-            <div className="text-orange-400" style={{ fontSize: "7px" }}>
-              {threat.severity.toUpperCase()}
-            </div>
-            {diameter && (
-              <div className="text-gray-300" style={{ fontSize: "7px" }}>
-                Ø {Math.round(diameter)}m
-              </div>
-            )}
-            {velocity && (
-              <div className="text-blue-400" style={{ fontSize: "7px" }}>
-                🚀 {velocity.toFixed(1)} km/s
-              </div>
-            )}
-
-            {/* Live updating distance */}
-            <div
-              className="text-cyan-400 mt-0.5 pt-0.5 border-t border-gray-700"
-              style={{ fontSize: "7px" }}
-            >
-              📏{" "}
-              {currentDistance >= 1000
-                ? (currentDistance / 1000).toFixed(1) + "K km"
-                : Math.round(currentDistance) + " km"}
-            </div>
-
-            {/* Live updating time to impact */}
-            <div className="text-yellow-300" style={{ fontSize: "7px" }}>
-              ⏱️{" "}
-              {timeToImpact >= 1
-                ? timeToImpact.toFixed(1) + " min"
-                : (timeToImpact * 60).toFixed(0) + " sec"}
-            </div>
-
-            {diameter < 25 && (
               <div
-                className="text-yellow-400 mt-0.5 pt-0.5 border-t border-gray-700"
-                style={{ fontSize: "7px" }}
+                className="bg-black/95 text-white px-1.5 py-0.5 rounded border border-neon-red font-mono shadow-lg"
+                style={{
+                  fontSize: `${baseFontSize}px`,
+                  maxWidth: `${110 * zoomScale}px`,
+                }}
               >
-                🔥 Will burn up in atmosphere
+                <div
+                  className="font-bold text-neon-red mb-0.5 truncate"
+                  style={{ fontSize: `${titleFontSize}px` }}
+                >
+                  ⚠️ {threat.data?.name || threat.title}
+                </div>
+                <div
+                  className="text-orange-400"
+                  style={{ fontSize: `${smallFontSize}px` }}
+                >
+                  {threat.severity.toUpperCase()}
+                </div>
+                {diameter && (
+                  <div
+                    className="text-gray-300"
+                    style={{ fontSize: `${smallFontSize}px` }}
+                  >
+                    Ø {Math.round(diameter)}m
+                  </div>
+                )}
+                {velocity && (
+                  <div
+                    className="text-blue-400"
+                    style={{ fontSize: `${smallFontSize}px` }}
+                  >
+                    🚀 {velocity.toFixed(1)} km/s
+                  </div>
+                )}
+
+                {/* Live updating distance */}
+                <div
+                  className="text-cyan-400 mt-0.5 pt-0.5 border-t border-gray-700"
+                  style={{ fontSize: `${smallFontSize}px` }}
+                >
+                  📏{" "}
+                  {currentDistance >= 1000
+                    ? (currentDistance / 1000).toFixed(1) + "K km"
+                    : Math.round(currentDistance) + " km"}
+                </div>
+
+                {/* Live updating time to impact */}
+                <div
+                  className="text-yellow-300"
+                  style={{ fontSize: `${smallFontSize}px` }}
+                >
+                  ⏱️{" "}
+                  {timeToImpact >= 1
+                    ? timeToImpact.toFixed(1) + " min"
+                    : (timeToImpact * 60).toFixed(0) + " sec"}
+                </div>
+
+                {diameter < 25 && (
+                  <div
+                    className="text-yellow-400 mt-0.5 pt-0.5 border-t border-gray-700"
+                    style={{ fontSize: `${smallFontSize}px` }}
+                  >
+                    🔥 Will burn up in atmosphere
+                  </div>
+                )}
+                <div
+                  className="text-neon-green mt-0.5 text-center border-t border-gray-700 pt-0.5"
+                  style={{ fontSize: `${baseFontSize}px` }}
+                >
+                  🎯 CLICK TO DEFLECT
+                </div>
               </div>
-            )}
-            <div
-              className="text-neon-green mt-0.5 text-center border-t border-gray-700 pt-0.5"
-              style={{ fontSize: "8px" }}
-            >
-              🎯 CLICK TO DEFLECT
-            </div>
-          </div>
-        </Html>
-      )}
+            </Html>
+          );
+        })()}
     </group>
   );
 }
@@ -695,6 +727,9 @@ function Satellite({ satellite, index, onUpgrade, isPaused = false }) {
   const satelliteRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
+
+  // Get camera for zoom-based scaling
+  const { camera } = useThree();
 
   // Use timestamp-based animation instead of accumulating delta
   const startTimeRef = useRef(Date.now());
@@ -787,38 +822,61 @@ function Satellite({ satellite, index, onUpgrade, isPaused = false }) {
       )}
 
       {/* Tooltip */}
-      {hovered && (
-        <Html
-          distanceFactor={6}
-          position={[0, 0.3, 0]}
-          style={{
-            transform: "translate(-50%, -120%)",
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            className="bg-black/95 text-white px-1 py-0.5 rounded border border-neon-blue font-mono shadow-lg"
-            style={{ fontSize: "7px", maxWidth: "90px" }}
-          >
-            <div
-              className="font-bold text-neon-blue mb-0.5"
-              style={{ fontSize: "8px" }}
+      {hovered &&
+        (() => {
+          // Calculate scale based on camera distance (default camera at ~8.5 units)
+          const cameraDistance = camera.position.length();
+          const defaultDistance = 8.5;
+          const zoomScale = cameraDistance / defaultDistance;
+
+          // Adjust distanceFactor and font sizes based on zoom (increased for better visibility)
+          const scaledDistanceFactor = 10 * zoomScale;
+          const baseFontSize = 9 * zoomScale;
+          const titleFontSize = 10 * zoomScale;
+          const smallFontSize = 8 * zoomScale;
+
+          return (
+            <Html
+              distanceFactor={scaledDistanceFactor}
+              position={[0, 0.3, 0]}
+              style={{
+                transform: "translate(-50%, -120%)",
+                pointerEvents: "none",
+              }}
             >
-              🛰️ Lv{level}
-            </div>
-            <div className="text-gray-300" style={{ fontSize: "6px" }}>
-              R: {detectionRadius.toFixed(1)}
-            </div>
-            {level < 3 && (
-              <div className="mt-0.5 border-t border-gray-700 pt-0.5 text-center">
-                <div className="text-yellow-400" style={{ fontSize: "6px" }}>
-                  ${level * 100}K
+              <div
+                className="bg-black/95 text-white px-1 py-0.5 rounded border border-neon-blue font-mono shadow-lg"
+                style={{
+                  fontSize: `${baseFontSize}px`,
+                  maxWidth: `${120 * zoomScale}px`,
+                }}
+              >
+                <div
+                  className="font-bold text-neon-blue mb-0.5"
+                  style={{ fontSize: `${titleFontSize}px` }}
+                >
+                  🛰️ Lv{level}
                 </div>
+                <div
+                  className="text-gray-300"
+                  style={{ fontSize: `${smallFontSize}px` }}
+                >
+                  R: {detectionRadius.toFixed(1)}
+                </div>
+                {level < 3 && (
+                  <div className="mt-0.5 border-t border-gray-700 pt-0.5 text-center">
+                    <div
+                      className="text-yellow-400"
+                      style={{ fontSize: `${smallFontSize}px` }}
+                    >
+                      ${level * 100}K
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </Html>
-      )}
+            </Html>
+          );
+        })()}
 
       {/* Large invisible hitbox for easier hovering (4x size) */}
       <mesh
@@ -980,6 +1038,9 @@ function Probe({
   const [hovered, setHovered] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
 
+  // Get camera for zoom-based scaling
+  const { camera } = useThree();
+
   // Use timestamp-based animation instead of accumulating delta
   const startTimeRef = useRef(Date.now());
   const pausedTimeRef = useRef(0); // Total time spent paused
@@ -1059,38 +1120,61 @@ function Probe({
   return (
     <group ref={probeRef}>
       {/* Tooltip */}
-      {hovered && (
-        <Html
-          distanceFactor={6}
-          position={[0, 0.3, 0]}
-          style={{
-            transform: "translate(-50%, -120%)",
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            className="bg-black/95 text-white px-1 py-0.5 rounded border border-neon-green font-mono shadow-lg"
-            style={{ fontSize: "7px", maxWidth: "90px" }}
-          >
-            <div
-              className="font-bold text-neon-green mb-0.5"
-              style={{ fontSize: "8px" }}
+      {hovered &&
+        (() => {
+          // Calculate scale based on camera distance (default camera at ~8.5 units)
+          const cameraDistance = camera.position.length();
+          const defaultDistance = 8.5;
+          const zoomScale = cameraDistance / defaultDistance;
+
+          // Adjust distanceFactor and font sizes based on zoom (increased for better visibility)
+          const scaledDistanceFactor = 10 * zoomScale;
+          const baseFontSize = 9 * zoomScale;
+          const titleFontSize = 10 * zoomScale;
+          const smallFontSize = 8 * zoomScale;
+
+          return (
+            <Html
+              distanceFactor={scaledDistanceFactor}
+              position={[0, 0.3, 0]}
+              style={{
+                transform: "translate(-50%, -120%)",
+                pointerEvents: "none",
+              }}
             >
-              🚀 Lv{level}
-            </div>
-            <div className="text-gray-300" style={{ fontSize: "6px" }}>
-              ⚡{laserPower}%
-            </div>
-            {level < 3 && (
-              <div className="mt-0.5 border-t border-gray-700 pt-0.5 text-center">
-                <div className="text-yellow-400" style={{ fontSize: "6px" }}>
-                  ${level * 150}K
+              <div
+                className="bg-black/95 text-white px-1 py-0.5 rounded border border-neon-green font-mono shadow-lg"
+                style={{
+                  fontSize: `${baseFontSize}px`,
+                  maxWidth: `${120 * zoomScale}px`,
+                }}
+              >
+                <div
+                  className="font-bold text-neon-green mb-0.5"
+                  style={{ fontSize: `${titleFontSize}px` }}
+                >
+                  🚀 Lv{level}
                 </div>
+                <div
+                  className="text-gray-300"
+                  style={{ fontSize: `${smallFontSize}px` }}
+                >
+                  ⚡{laserPower}%
+                </div>
+                {level < 3 && (
+                  <div className="mt-0.5 border-t border-gray-700 pt-0.5 text-center">
+                    <div
+                      className="text-yellow-400"
+                      style={{ fontSize: `${smallFontSize}px` }}
+                    >
+                      ${level * 150}K
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </Html>
-      )}
+            </Html>
+          );
+        })()}
 
       {/* Large invisible hitbox for easier hovering (4x size) */}
       <mesh
