@@ -246,7 +246,7 @@ const PreLevelBriefing = ({ level, onLaunch, onBack }) => {
         <div className="mt-4 text-center text-gray-500 text-sm">
           Good luck, Commander. Earth is counting on you.
         </div>
-        </motion.div>
+      </motion.div>
       </div>
     </div>
   );
