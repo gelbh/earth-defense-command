@@ -135,7 +135,7 @@ const LevelSelect = ({ onSelectLevel, onBack }) => {
   }
 
   return (
-    <div className="min-h-screen bg-space-blue p-8">
+    <div className="fixed inset-0 bg-space-blue p-8 overflow-y-auto">
       {/* Header */}
       <div className="max-w-6xl mx-auto">
         <motion.div

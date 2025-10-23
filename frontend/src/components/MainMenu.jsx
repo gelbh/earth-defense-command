@@ -11,7 +11,7 @@ const MainMenu = ({
   const { progression } = useLevel();
 
   return (
-    <div className="min-h-screen bg-space-blue flex items-center justify-center p-8 relative overflow-hidden">
+    <div className="fixed inset-0 bg-space-blue flex items-center justify-center p-8 relative overflow-hidden">
       {/* Animated Background Stars */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(50)].map((_, i) => (

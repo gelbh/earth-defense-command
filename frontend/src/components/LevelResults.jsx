@@ -35,7 +35,7 @@ const LevelResults = ({ results, onNextLevel, onRetry, onMenu }) => {
   };
 
   return (
-    <div className="min-h-screen bg-space-blue flex items-center justify-center p-8">
+    <div className="fixed inset-0 bg-space-blue flex items-center justify-center p-8 overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.8, y: 50 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
