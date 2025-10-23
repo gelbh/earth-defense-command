@@ -109,13 +109,14 @@ const GameDashboard = ({
     }
   };
 
-  if (loading && !gameState) {
+  // Show loading if gameState is not ready
+  if (!gameState || (isLevelMode && !sessionId)) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-space-blue">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-neon-blue mx-auto mb-4"></div>
           <p className="text-neon-blue font-mono">
-            Initializing Earth Defense Command...
+            {isLevelMode ? "Initializing Mission..." : "Initializing Earth Defense Command..."}
           </p>
         </div>
       </div>
