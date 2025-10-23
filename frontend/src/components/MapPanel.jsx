@@ -1,11 +1,16 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useGame } from "../context/GameContext";
+import { useLevel } from "../context/LevelContext";
 import Earth3D from "./Earth3D";
 import Toast from "./Toast";
 
-const MapPanel = ({ gameState, events, threats }) => {
-  const { processAction, startGame } = useGame();
+const MapPanel = ({ gameState, events, threats, isLevelMode = false }) => {
+  const { processAction: processEndlessAction, startGame } = useGame();
+  const { processLevelAction, handleBurnup: handleLevelBurnup } = useLevel();
+  
+  // Use the appropriate action processor based on mode
+  const processAction = isLevelMode ? processLevelAction : processEndlessAction;
   const [selectedThreat, setSelectedThreat] = useState(null);
   const [deflecting, setDeflecting] = useState(false);
   const [toast, setToast] = useState(null);
@@ -27,7 +32,7 @@ const MapPanel = ({ gameState, events, threats }) => {
         targetId: assetId,
       });
 
-      if (result && result.success) {
+      if (result?.success) {
         setToast({
           type: "success",
           message: {
@@ -65,7 +70,7 @@ const MapPanel = ({ gameState, events, threats }) => {
         resource: "probe",
       });
 
-      if (result && result.success) {
+      if (result?.success) {
         // Success notification
         setToast({
           type: "success",
@@ -110,7 +115,7 @@ const MapPanel = ({ gameState, events, threats }) => {
         targetId: threat.id,
       });
 
-      if (result && result.success) {
+      if (result?.success) {
         // Impact notification with damage info
         setToast({
           type: "error",
@@ -138,6 +143,24 @@ const MapPanel = ({ gameState, events, threats }) => {
     }
   };
 
+  const handleBurnup = async (asteroidId) => {
+    try {
+      if (isLevelMode) {
+        await handleLevelBurnup(asteroidId);
+      }
+      // For endless mode, burnup is handled automatically in backend
+      setToast({
+        type: "success",
+        message: {
+          title: "🔥 Atmospheric Burnup!",
+          description: "Small asteroid burned up in atmosphere",
+        },
+      });
+    } catch (error) {
+      console.error("Failed to handle burnup:", error);
+    }
+  };
+
   return (
     <div className="bg-dark-gray rounded-xl border border-neon-blue/30 p-3 flex flex-col h-full">
       <div className="flex items-center justify-between mb-2">
@@ -157,6 +180,7 @@ const MapPanel = ({ gameState, events, threats }) => {
           onDeflectAsteroid={handleDeflect}
           onImpact={handleImpact}
           onUpgrade={handleUpgrade}
+          onBurnup={handleBurnup}
         />
 
         {/* Earth Status Overlay */}
@@ -172,8 +196,8 @@ const MapPanel = ({ gameState, events, threats }) => {
           </div>
         </div>
 
-        {/* Start Game Button */}
-        {!gameStarted && threats.length === 0 && (
+        {/* Start Game Button (Endless Mode Only) */}
+        {!isLevelMode && !gameStarted && threats.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <motion.button
               initial={{ scale: 0.8, opacity: 0 }}
