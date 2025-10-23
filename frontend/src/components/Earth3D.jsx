@@ -789,7 +789,7 @@ function Satellite({ satellite, index, onUpgrade, isPaused = false }) {
       {/* Tooltip */}
       {hovered && (
         <Html
-          distanceFactor={15}
+          distanceFactor={6}
           position={[0, 0.3, 0]}
           style={{
             transform: "translate(-50%, -120%)",
@@ -797,21 +797,21 @@ function Satellite({ satellite, index, onUpgrade, isPaused = false }) {
           }}
         >
           <div
-            className="bg-black/95 text-white px-1.5 py-0.5 rounded border border-neon-blue font-mono shadow-lg"
-            style={{ fontSize: "9px", maxWidth: "120px" }}
+            className="bg-black/95 text-white px-1 py-0.5 rounded border border-neon-blue font-mono shadow-lg"
+            style={{ fontSize: "7px", maxWidth: "90px" }}
           >
             <div
               className="font-bold text-neon-blue mb-0.5"
-              style={{ fontSize: "10px" }}
+              style={{ fontSize: "8px" }}
             >
               🛰️ Lv{level}
             </div>
-            <div className="text-gray-300" style={{ fontSize: "8px" }}>
+            <div className="text-gray-300" style={{ fontSize: "6px" }}>
               R: {detectionRadius.toFixed(1)}
             </div>
             {level < 3 && (
               <div className="mt-0.5 border-t border-gray-700 pt-0.5 text-center">
-                <div className="text-yellow-400" style={{ fontSize: "7px" }}>
+                <div className="text-yellow-400" style={{ fontSize: "6px" }}>
                   ${level * 100}K
                 </div>
               </div>
@@ -819,7 +819,8 @@ function Satellite({ satellite, index, onUpgrade, isPaused = false }) {
           </div>
         </Html>
       )}
-      {/* Main satellite body */}
+
+      {/* Large invisible hitbox for easier hovering (4x size) */}
       <mesh
         onPointerOver={(e) => {
           e.stopPropagation();
@@ -833,6 +834,12 @@ function Satellite({ satellite, index, onUpgrade, isPaused = false }) {
         }}
         onClick={handleClick}
       >
+        <sphereGeometry args={[0.3, 16, 16]} />
+        <meshBasicMaterial visible={false} />
+      </mesh>
+
+      {/* Main satellite body (visual only) */}
+      <mesh>
         <boxGeometry args={[0.08, 0.08, 0.12]} />
         <meshStandardMaterial
           color={level >= 3 ? "#00ff00" : "#00d4ff"}
@@ -978,7 +985,12 @@ function Probe({
   const pausedTimeRef = useRef(0); // Total time spent paused
   const pauseStartRef = useRef(null); // When current pause started
 
-  const radius = 2.8;
+  // Calculate orbit radius based on orbit layer (outer orbits)
+  // Base probe orbit starts at 3.2, then 3.6, 4.0, 4.4, etc.
+  const orbitLayer = probe?.orbitLayer || 0;
+  const baseProbeOrbit = 3.2; // Further out than satellites (2.5)
+  const orbitSpacing = 0.4; // Space between orbit layers
+  const radius = baseProbeOrbit + orbitLayer * orbitSpacing;
   const speed = 0.6;
 
   // Initialize timing on mount
@@ -1049,7 +1061,7 @@ function Probe({
       {/* Tooltip */}
       {hovered && (
         <Html
-          distanceFactor={15}
+          distanceFactor={6}
           position={[0, 0.3, 0]}
           style={{
             transform: "translate(-50%, -120%)",
@@ -1057,21 +1069,21 @@ function Probe({
           }}
         >
           <div
-            className="bg-black/95 text-white px-1.5 py-0.5 rounded border border-neon-green font-mono shadow-lg"
-            style={{ fontSize: "9px", maxWidth: "120px" }}
+            className="bg-black/95 text-white px-1 py-0.5 rounded border border-neon-green font-mono shadow-lg"
+            style={{ fontSize: "7px", maxWidth: "90px" }}
           >
             <div
               className="font-bold text-neon-green mb-0.5"
-              style={{ fontSize: "10px" }}
+              style={{ fontSize: "8px" }}
             >
               🚀 Lv{level}
             </div>
-            <div className="text-gray-300" style={{ fontSize: "8px" }}>
+            <div className="text-gray-300" style={{ fontSize: "6px" }}>
               ⚡{laserPower}%
             </div>
             {level < 3 && (
               <div className="mt-0.5 border-t border-gray-700 pt-0.5 text-center">
-                <div className="text-yellow-400" style={{ fontSize: "7px" }}>
+                <div className="text-yellow-400" style={{ fontSize: "6px" }}>
                   ${level * 150}K
                 </div>
               </div>
@@ -1079,9 +1091,9 @@ function Probe({
           </div>
         </Html>
       )}
-      {/* Probe body - cone shape */}
+
+      {/* Large invisible hitbox for easier hovering (4x size) */}
       <mesh
-        rotation={[0, 0, Math.PI / 2]}
         onPointerOver={(e) => {
           e.stopPropagation();
           setHovered(true);
@@ -1094,6 +1106,12 @@ function Probe({
         }}
         onClick={handleClick}
       >
+        <sphereGeometry args={[0.3, 16, 16]} />
+        <meshBasicMaterial visible={false} />
+      </mesh>
+
+      {/* Probe body - cone shape (visual only) */}
+      <mesh rotation={[0, 0, Math.PI / 2]}>
         <coneGeometry args={[0.06, 0.15, 8]} />
         <meshStandardMaterial
           color={level >= 3 ? "#ffaa00" : "#00ff88"}
@@ -1193,10 +1211,29 @@ function Scene({
       {/* Orbit rings */}
       <OrbitRing radius={2.5} color="#00d4ff" opacity={0.12} />{" "}
       {/* Satellite orbit */}
-      <OrbitRing radius={2.8} color="#00ff88" opacity={0.1} />{" "}
-      {/* Probe orbit */}
-      <OrbitRing radius={3.5} opacity={0.08} />
-      <OrbitRing radius={4} opacity={0.06} />
+      {/* Dynamic probe orbit rings - show one ring per orbit layer */}
+      {gameState &&
+        Array.isArray(gameState.probes) &&
+        (() => {
+          // Calculate unique orbit layers
+          const orbitLayers = new Set(
+            gameState.probes.map((p) => p.orbitLayer || 0)
+          );
+          const baseProbeOrbit = 3.2;
+          const orbitSpacing = 0.4;
+
+          return Array.from(orbitLayers).map((layer) => (
+            <OrbitRing
+              key={`probe-orbit-${layer}`}
+              radius={baseProbeOrbit + layer * orbitSpacing}
+              color="#00ff88"
+              opacity={0.1}
+            />
+          ));
+        })()}
+      {/* Background reference rings */}
+      <OrbitRing radius={3.5} opacity={0.06} />
+      <OrbitRing radius={4} opacity={0.04} />
       {/* Deployed Satellites with detection radii */}
       {gameState &&
         Array.isArray(gameState.satellites) &&
@@ -1565,8 +1602,11 @@ const Earth3D = ({
       return probePositionsRef.current[probe.id];
     }
 
-    // Fallback to calculated position based on orbitPosition
-    const radius = 2.8;
+    // Fallback to calculated position based on orbitPosition and orbitLayer
+    const orbitLayer = probe?.orbitLayer || 0;
+    const baseProbeOrbit = 3.2;
+    const orbitSpacing = 0.4;
+    const radius = baseProbeOrbit + orbitLayer * orbitSpacing;
     const angle = probe?.orbitPosition || 0;
 
     return [
