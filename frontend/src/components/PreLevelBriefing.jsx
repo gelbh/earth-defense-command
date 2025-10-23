@@ -43,12 +43,13 @@ const PreLevelBriefing = ({ level, onLaunch, onBack }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-space-blue flex justify-center overflow-y-auto">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="max-w-4xl w-full bg-black bg-opacity-80 rounded-lg border-2 border-neon-blue p-8 font-mono my-8"
-      >
+    <div className="fixed inset-0 bg-space-blue overflow-y-auto p-4 md:p-8">
+      <div className="flex justify-center min-h-full">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-4xl w-full bg-black bg-opacity-80 rounded-lg border-2 border-neon-blue p-6 md:p-8 font-mono my-auto"
+        >
         {/* Header */}
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-4 mb-4">
@@ -245,7 +246,8 @@ const PreLevelBriefing = ({ level, onLaunch, onBack }) => {
         <div className="mt-4 text-center text-gray-500 text-sm">
           Good luck, Commander. Earth is counting on you.
         </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 };
