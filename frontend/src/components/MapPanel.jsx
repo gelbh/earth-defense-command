@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "../context/GameContext";
 import { useLevel } from "../context/LevelContext";
 import Earth3D from "./Earth3D";
@@ -8,7 +8,7 @@ import Toast from "./Toast";
 const MapPanel = ({ gameState, events, threats, isLevelMode = false }) => {
   const { processAction: processEndlessAction, startGame } = useGame();
   const { processLevelAction, handleBurnup: handleLevelBurnup } = useLevel();
-  
+
   // Use the appropriate action processor based on mode
   const processAction = isLevelMode ? processLevelAction : processEndlessAction;
   const [selectedThreat, setSelectedThreat] = useState(null);
@@ -162,18 +162,9 @@ const MapPanel = ({ gameState, events, threats, isLevelMode = false }) => {
   };
 
   return (
-    <div className="bg-dark-gray rounded-xl border border-neon-blue/30 p-3 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-bold text-neon-blue font-mono">
-          🌍 EARTH DEFENSE MAP
-        </h2>
-        <div className="text-xs text-gray-400 font-mono">
-          {threats.length} Active Threats
-        </div>
-      </div>
-
-      {/* 3D Earth Visualization */}
-      <div className="flex-1 relative rounded-lg overflow-hidden mb-2 min-h-[200px]">
+    <div className="w-full h-full relative">
+      {/* 3D Earth Visualization - Full Screen */}
+      <div className="w-full h-full relative">
         <Earth3D
           threats={threats}
           gameState={gameState}
@@ -182,19 +173,6 @@ const MapPanel = ({ gameState, events, threats, isLevelMode = false }) => {
           onUpgrade={handleUpgrade}
           onBurnup={handleBurnup}
         />
-
-        {/* Earth Status Overlay */}
-        <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-sm rounded-lg p-2 border border-neon-blue/30">
-          <div className="text-xs font-mono space-y-0.5">
-            <div className="text-neon-green">STATUS: OPERATIONAL</div>
-            <div className="text-gray-300">
-              HEALTH: {gameState.earthHealth}%
-            </div>
-            <div className="text-neon-blue">
-              REPUTATION: {gameState.reputation}
-            </div>
-          </div>
-        </div>
 
         {/* Start Game Button (Endless Mode Only) */}
         {!isLevelMode && !gameStarted && threats.length === 0 && (
@@ -219,10 +197,27 @@ const MapPanel = ({ gameState, events, threats, isLevelMode = false }) => {
         )}
 
         {/* Controls hint */}
-        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm rounded px-2 py-1 text-xs text-gray-400 font-mono">
+        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm rounded px-3 py-1.5 text-xs text-gray-400 font-mono border border-gray-700">
           🖱️ Drag to rotate • Scroll to zoom
         </div>
       </div>
+
+      {/* Threat Counter - Bottom Center (below Earth) */}
+      {threats.length > 0 && (
+        <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-black/60 backdrop-blur-lg border border-neon-red/50 rounded-lg px-4 py-2 pointer-events-none shadow-2xl z-10">
+          <div className="flex items-center gap-2">
+            <span className="text-lg animate-pulse">☄️</span>
+            <div>
+              <p className="text-xs text-gray-400 font-mono uppercase">
+                Active Threats
+              </p>
+              <p className="text-lg font-bold text-neon-red font-mono">
+                {threats.length}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Threat Detail Modal */}
       {selectedThreat && (
@@ -302,14 +297,16 @@ const MapPanel = ({ gameState, events, threats, isLevelMode = false }) => {
       )}
 
       {/* Toast Notifications */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-          duration={4000}
-        />
-      )}
+      <AnimatePresence>
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+            duration={3000}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
