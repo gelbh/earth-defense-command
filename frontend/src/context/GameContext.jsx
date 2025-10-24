@@ -1,15 +1,15 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import api from '../services/api.js';
+import React, { createContext, useContext, useReducer, useEffect } from "react";
+import api from "../services/api.js";
 
 const GameContext = createContext();
 
 // Game state reducer
 const gameReducer = (state, action) => {
   switch (action.type) {
-    case 'SET_GAME_STATE':
+    case "SET_GAME_STATE":
       return { ...state, ...action.payload };
-    
-    case 'UPDATE_RESOURCES':
+
+    case "UPDATE_RESOURCES":
       return {
         ...state,
         funds: action.payload.funds ?? state.funds,
@@ -17,32 +17,35 @@ const gameReducer = (state, action) => {
         satellites: action.payload.satellites ?? state.satellites,
         probes: action.payload.probes ?? state.probes,
       };
-    
-    case 'ADD_EVENT':
+
+    case "ADD_EVENT":
       return {
         ...state,
         events: [action.payload, ...state.events.slice(0, 49)], // Keep last 50 events
       };
-    
-    case 'UPDATE_THREATS':
+
+    case "UPDATE_THREATS":
       return {
         ...state,
         threats: action.payload,
       };
-    
-    case 'UPDATE_SCORE':
+
+    case "UPDATE_SCORE":
       return {
         ...state,
         score: state.score + action.payload,
       };
-    
-    case 'UPDATE_EARTH_HEALTH':
+
+    case "UPDATE_EARTH_HEALTH":
       return {
         ...state,
-        earthHealth: Math.max(0, Math.min(100, state.earthHealth + action.payload)),
+        earthHealth: Math.max(
+          0,
+          Math.min(100, state.earthHealth + action.payload)
+        ),
       };
-    
-    case 'PURCHASE_UPGRADE':
+
+    case "PURCHASE_UPGRADE":
       return {
         ...state,
         upgrades: {
@@ -50,8 +53,8 @@ const gameReducer = (state, action) => {
           [action.payload]: true,
         },
       };
-    
-    case 'RESET_GAME':
+
+    case "RESET_GAME":
       return {
         day: 1,
         score: 0,
@@ -70,7 +73,7 @@ const gameReducer = (state, action) => {
         earthHealth: 100,
         reputation: 100,
       };
-    
+
     default:
       return state;
   }
@@ -109,13 +112,13 @@ export const GameProvider = ({ children }) => {
   const loadGameState = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/events/state');
+      const response = await api.get("/events/state");
       if (response.data.success) {
-        dispatch({ type: 'SET_GAME_STATE', payload: response.data.gameState });
+        dispatch({ type: "SET_GAME_STATE", payload: response.data.gameState });
       }
     } catch (err) {
-      console.error('Error loading game state:', err);
-      setError('Failed to load game state');
+      console.error("Error loading game state:", err);
+      setError("Failed to load game state");
     } finally {
       setLoading(false);
     }
@@ -124,14 +127,14 @@ export const GameProvider = ({ children }) => {
   const generateEvents = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/events');
+      const response = await api.get("/events");
       if (response.data.success) {
-        dispatch({ type: 'SET_GAME_STATE', payload: response.data.gameState });
+        dispatch({ type: "SET_GAME_STATE", payload: response.data.gameState });
         return response.data.events;
       }
     } catch (err) {
-      console.error('Error generating events:', err);
-      setError('Failed to generate events');
+      console.error("Error generating events:", err);
+      setError("Failed to generate events");
     } finally {
       setLoading(false);
     }
@@ -141,47 +144,47 @@ export const GameProvider = ({ children }) => {
   const processAction = async (action) => {
     try {
       setLoading(true);
-      const response = await api.post('/events/action', { action });
+      const response = await api.post("/events/action", { action });
       if (response.data.success) {
-        dispatch({ type: 'SET_GAME_STATE', payload: response.data.gameState });
+        dispatch({ type: "SET_GAME_STATE", payload: response.data.gameState });
         return response.data.result;
       }
     } catch (err) {
-      console.error('Error processing action:', err);
-      setError('Failed to process action');
+      console.error("Error processing action:", err);
+      setError("Failed to process action");
     } finally {
       setLoading(false);
     }
-    return { success: false, message: 'Action failed' };
+    return { success: false, message: "Action failed" };
   };
 
   const purchaseUpgrade = async (upgradeType) => {
     try {
       setLoading(true);
-      const response = await api.post('/events/upgrade', { upgradeType });
+      const response = await api.post("/events/upgrade", { upgradeType });
       if (response.data.success) {
-        dispatch({ type: 'SET_GAME_STATE', payload: response.data.gameState });
+        dispatch({ type: "SET_GAME_STATE", payload: response.data.gameState });
         return response.data.result;
       }
     } catch (err) {
-      console.error('Error purchasing upgrade:', err);
-      setError('Failed to purchase upgrade');
+      console.error("Error purchasing upgrade:", err);
+      setError("Failed to purchase upgrade");
     } finally {
       setLoading(false);
     }
-    return { success: false, message: 'Upgrade failed' };
+    return { success: false, message: "Upgrade failed" };
   };
 
   const advanceDay = async () => {
     try {
       setLoading(true);
-      const response = await api.post('/events/advance-day');
+      const response = await api.post("/events/advance-day");
       if (response.data.success) {
-        dispatch({ type: 'SET_GAME_STATE', payload: response.data.gameState });
+        dispatch({ type: "SET_GAME_STATE", payload: response.data.gameState });
       }
     } catch (err) {
-      console.error('Error advancing day:', err);
-      setError('Failed to advance day');
+      console.error("Error advancing day:", err);
+      setError("Failed to advance day");
     } finally {
       setLoading(false);
     }
@@ -190,13 +193,13 @@ export const GameProvider = ({ children }) => {
   const resetGame = async () => {
     try {
       setLoading(true);
-      const response = await api.post('/events/reset');
+      const response = await api.post("/events/reset");
       if (response.data.success) {
-        dispatch({ type: 'SET_GAME_STATE', payload: response.data.gameState });
+        dispatch({ type: "SET_GAME_STATE", payload: response.data.gameState });
       }
     } catch (err) {
-      console.error('Error resetting game:', err);
-      setError('Failed to reset game');
+      console.error("Error resetting game:", err);
+      setError("Failed to reset game");
     } finally {
       setLoading(false);
     }
@@ -209,8 +212,8 @@ export const GameProvider = ({ children }) => {
         return response.data.asteroids;
       }
     } catch (err) {
-      console.error('Error fetching NEO data:', err);
-      setError('Failed to fetch asteroid data');
+      console.error("Error fetching NEO data:", err);
+      setError("Failed to fetch asteroid data");
     }
     return [];
   };
@@ -220,8 +223,8 @@ export const GameProvider = ({ children }) => {
       setLoading(true);
       await generateEvents();
     } catch (err) {
-      console.error('Error starting game:', err);
-      setError('Failed to start game');
+      console.error("Error starting game:", err);
+      setError("Failed to start game");
     } finally {
       setLoading(false);
     }
@@ -242,17 +245,13 @@ export const GameProvider = ({ children }) => {
     getNearEarthObjects,
   };
 
-  return (
-    <GameContext.Provider value={value}>
-      {children}
-    </GameContext.Provider>
-  );
+  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 };
 
 export const useGame = () => {
   const context = useContext(GameContext);
   if (!context) {
-    throw new Error('useGame must be used within a GameProvider');
+    throw new Error("useGame must be used within a GameProvider");
   }
   return context;
 };
