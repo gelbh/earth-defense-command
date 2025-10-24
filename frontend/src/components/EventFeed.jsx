@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const EventFeed = ({ events }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const isExpanded = true; // Always expanded in overlay mode
   const getSeverityIcon = (severity) => {
     switch (severity) {
       case 'critical': return '🚨';
@@ -32,23 +32,7 @@ const EventFeed = ({ events }) => {
   };
 
   return (
-    <div className="bg-medium-gray rounded-lg p-2 flex-shrink-0 flex flex-col">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-bold text-white font-mono">📡 EVENT LOG</h3>
-        <div className="flex items-center gap-2">
-          <div className="text-xs text-gray-400 font-mono">
-            {events.length} Events
-          </div>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-neon-blue hover:text-blue-400 transition-colors"
-            title={isExpanded ? "Minimize" : "Maximize"}
-          >
-            {isExpanded ? '▼' : '▶'}
-          </button>
-        </div>
-      </div>
-
+    <div className="p-4 flex-shrink-0 flex flex-col">
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -58,7 +42,7 @@ const EventFeed = ({ events }) => {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="space-y-1 max-h-40 overflow-y-auto">
+            <div className="space-y-2 overflow-y-auto" style={{ maxHeight: "350px" }}>
         {events.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-4xl mb-2">📡</div>
@@ -112,15 +96,15 @@ const EventFeed = ({ events }) => {
       </AnimatePresence>
 
       {/* System Status */}
-      {isExpanded && (
-        <div className="mt-2 pt-2 border-t border-gray-600 flex-shrink-0">
-        <div className="flex items-center justify-between text-xs font-mono">
-          <span className="text-gray-400">STATUS:</span>
-          <span className="text-neon-green flex items-center">
-            <span className="w-1.5 h-1.5 bg-neon-green rounded-full mr-1.5 animate-pulse"></span>
-            OPERATIONAL
-          </span>
-        </div>
+      {isExpanded && events.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-neon-blue/30 flex-shrink-0">
+          <div className="flex items-center justify-between text-xs font-mono">
+            <span className="text-gray-400">MONITORING:</span>
+            <span className="text-neon-green flex items-center">
+              <span className="w-1.5 h-1.5 bg-neon-green rounded-full mr-1.5 animate-pulse"></span>
+              ACTIVE
+            </span>
+          </div>
         </div>
       )}
     </div>
