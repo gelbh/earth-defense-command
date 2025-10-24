@@ -249,7 +249,9 @@ class LevelService {
 
         case "maintain_health":
           objective.current = gameState.earthHealth;
-          // Check at the end of level only
+          if (gameState.earthHealth >= objective.threshold) {
+            objective.completed = true;
+          }
           break;
 
         case "survive_waves":
