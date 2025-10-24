@@ -171,6 +171,13 @@ export const LevelProvider = ({ children }) => {
 
       // Update progression
       const updatedProgression = await updateProgression(results);
+
+      // Save to localStorage immediately (don't wait for useEffect)
+      localStorage.setItem(
+        "playerProgression",
+        JSON.stringify(updatedProgression)
+      );
+
       setProgression(updatedProgression);
 
       // Clear session
