@@ -1,16 +1,23 @@
 # 🌍 Earth Defense Command
 
-A real-time planetary defense game using NASA's Near Earth Object API. Deploy satellites, deflect asteroids, and protect Earth with stunning 3D graphics.
+A real-time planetary defense game using NASA's Near Earth Object API. Play through campaign missions, defend Earth from asteroids, and master tactical defense strategies with stunning 3D graphics.
 
 ![Earth Defense Command](https://img.shields.io/badge/status-active-success) ![Node.js](https://img.shields.io/badge/node-%3E%3D16-brightgreen) ![React](https://img.shields.io/badge/react-18-blue)
 
 ## 🎮 Features
 
-- **3D Earth Visualization** - Interactive 3D globe with React Three Fiber
+### Game Modes
+- **Campaign Mode** - 10 structured levels with specific objectives and star ratings
+- **Endless Mode** - Classic survival gameplay with continuous asteroid threats
+
+### Core Systems
+- **3D Earth Visualization** - Full-screen immersive 3D globe with React Three Fiber
 - **Real NASA Data** - Live asteroid feeds from NASA's NEO API
 - **Orbital Defense Network** - Deploy and upgrade satellites and laser probes
-- **Realistic Physics** - Atmospheric burnup, asteroid fragmentation, detection zones
-- **Strategic Gameplay** - Resource management, upgrades, and tactical decisions
+- **Realistic Physics** - Atmospheric burnup, asteroid fragmentation, 3D detection zones
+- **Wave-Based Spawning** - Strategic asteroid waves with delays
+- **Progression System** - Unlock levels, earn stars, track best times
+- **Replay System** - See previous records and improve your score
 
 ## 🛠️ Tech Stack
 
@@ -60,19 +67,29 @@ Open [http://localhost:5173](http://localhost:5173) and play!
 
 ## 🎯 How to Play
 
+### Campaign Mode
+1. **Choose a Level** - Select from unlocked missions
+2. **Review Objectives** - See mission goals and loadout
+3. **Launch Mission** - Start the level
+4. **Deploy & Upgrade** - Use satellites and probes strategically
+5. **Complete Objectives** - Destroy asteroids, survive waves
+6. **Earn Stars** - 1-3 stars based on performance
+7. **Unlock Levels** - Progress through the campaign
+
+### Endless Mode
 1. **Deploy Satellites** ($150K) - Detect incoming asteroids
 2. **Launch Probes** ($200K) - Deflect threats with lasers
 3. **Upgrade Assets** - Click satellites/probes in 3D view to upgrade
 4. **Manage Resources** - Balance funds, power, and missions
 5. **Advance Days** - Process threats and restore resources
+6. **Survive** - How long can you defend Earth?
 
 **Controls:**
-
-- Drag to rotate camera
-- Scroll to zoom
-- Click asteroids to deflect
-- Click satellites/probes to upgrade
-- Game auto-pauses when you tab away
+- 🖱️ Drag to rotate camera
+- 📜 Scroll to zoom
+- 🎯 Click asteroids to deflect
+- ⬆️ Click satellites/probes to upgrade
+- ⏸️ Game auto-pauses when you tab away
 
 ## 📁 Project Structure
 
@@ -80,31 +97,61 @@ Open [http://localhost:5173](http://localhost:5173) and play!
 earth-defense-command/
 ├── backend/
 │   ├── src/
-│   │   ├── services/gameService.js    # Core game logic
-│   │   ├── controllers/               # API endpoints
-│   │   └── server.js                  # Express server
+│   │   ├── services/
+│   │   │   ├── gameService.js       # Endless mode logic
+│   │   │   ├── levelService.js      # Campaign mode logic
+│   │   │   └── nasaService.js       # NASA API integration
+│   │   ├── controllers/             # API route handlers
+│   │   ├── data/levels.js           # 10 level configurations
+│   │   └── server.js                # Express server
 │   └── package.json
 ├── frontend/
 │   ├── src/
-│   │   ├── components/Earth3D.jsx     # 3D visualization
-│   │   ├── context/GameContext.jsx    # State management
-│   │   └── App.jsx
+│   │   ├── components/
+│   │   │   ├── Earth3D.jsx          # 3D visualization
+│   │   │   ├── GameDashboard.jsx    # Main gameplay UI
+│   │   │   ├── MainMenu.jsx         # Mode selection
+│   │   │   ├── LevelSelect.jsx      # Campaign level grid
+│   │   │   ├── PreLevelBriefing.jsx # Mission briefing
+│   │   │   └── LevelResults.jsx     # Results & stars
+│   │   ├── context/
+│   │   │   ├── GameContext.jsx      # Endless mode state
+│   │   │   └── LevelContext.jsx     # Campaign mode state
+│   │   └── App.jsx                  # Mode routing
 │   └── package.json
 └── README.md
 ```
 
 ## 🔗 API Endpoints
 
-**Game:**
-
+**Endless Mode:**
 - `GET /api/events` - Generate asteroid events
 - `GET /api/events/state` - Get game state
 - `POST /api/events/action` - Deploy, deflect, upgrade
 - `POST /api/events/advance-day` - Next day
 
-**NASA:**
+**Campaign Mode:**
+- `GET /api/levels` - Get all levels
+- `GET /api/levels/:id` - Get specific level
+- `POST /api/levels/:id/start` - Start level
+- `GET /api/levels/session/state` - Get level state (polled)
+- `POST /api/levels/session/action` - Process action
+- `POST /api/levels/session/complete` - Complete level
+- `POST /api/levels/progression/update` - Update progression
 
-- `GET /api/neo/asteroids` - Real asteroid data
+**NASA Data:**
+- `GET /api/neo/asteroids` - Real asteroid data from NASA NEO API
+
+## 🎨 UI/UX Design
+
+- **Full-Screen Map** - Immersive 3D Earth view with overlay UI panels
+- **Glassmorphism** - Modern semi-transparent panels with backdrop blur
+- **Minimizable Panels** - Event log and objectives can be collapsed
+- **Compact Layouts** - All screens fit without scrolling
+- **Star Animations** - Animated star reveals on level completion
+- **Toast Notifications** - Smooth fade-in/out for action feedback
+- **Progress Tracking** - localStorage persistence for campaign progress
+- **Replay Stats** - See previous best times and stars when replaying levels
 
 ## 🤝 Contributing
 
