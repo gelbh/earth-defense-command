@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const ResourceHUD = ({ gameState, onHelpClick }) => {
+const ResourceHUD = ({ gameState, onHelpClick, compact = false }) => {
   const formatCurrency = (amount) => {
     if (amount >= 1000000) {
       return `$${(amount / 1000000).toFixed(1)}M`;
@@ -100,6 +100,82 @@ const ResourceHUD = ({ gameState, onHelpClick }) => {
     );
   };
 
+  // Compact mode for overlay layout
+  if (compact) {
+    return (
+      <motion.div
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-black/40 backdrop-blur-lg border-b border-neon-blue/30 shadow-2xl"
+      >
+        <div className="px-4 py-2">
+          <div className="flex items-center justify-between gap-4">
+            {/* Left: Title + Help */}
+            <div className="flex items-center gap-3">
+              <div className="text-2xl filter drop-shadow-lg">🌎</div>
+              <div>
+                <h1 className="text-sm font-bold bg-gradient-to-r from-neon-blue via-blue-400 to-neon-blue bg-clip-text text-transparent font-mono leading-tight tracking-wide">
+                  EARTH DEFENSE COMMAND
+                </h1>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onHelpClick}
+                className="px-2 py-1 bg-neon-blue/20 hover:bg-neon-blue/40 border border-neon-blue/50 rounded text-neon-blue text-xs font-bold transition-all"
+                title="How to Play"
+              >
+                ❓
+              </motion.button>
+            </div>
+
+            {/* Right: Compact Resources */}
+            <div className="flex items-center gap-2">
+              <div className="px-2 py-1 bg-black/50 border border-neon-green/50 rounded flex items-center gap-1.5">
+                <span className="text-sm">💰</span>
+                <span className="text-xs font-bold text-neon-green font-mono">{formatCurrency(gameState.funds)}</span>
+              </div>
+
+              <div className="px-2 py-1 bg-black/50 border border-yellow-500/50 rounded flex items-center gap-1.5">
+                <span className="text-sm">⚡</span>
+                <span className={`text-xs font-bold font-mono ${getPowerTextColor(gameState.power)}`}>
+                  {gameState.power}%
+                </span>
+              </div>
+
+              <div className="px-2 py-1 bg-black/50 border border-neon-blue/50 rounded flex items-center gap-1.5">
+                <span className="text-sm">🛰️</span>
+                <span className="text-xs font-bold text-neon-blue font-mono">
+                  {Array.isArray(gameState.satellites) ? gameState.satellites.length : 0}
+                </span>
+              </div>
+
+              <div className="px-2 py-1 bg-black/50 border border-purple-400/50 rounded flex items-center gap-1.5">
+                <span className="text-sm">🚀</span>
+                <span className="text-xs font-bold text-purple-400 font-mono">
+                  {gameState.availableProbes || 0}
+                </span>
+              </div>
+
+              <div className="px-2 py-1 bg-black/50 border border-gray-500/50 rounded flex items-center gap-1.5">
+                <span className="text-sm">📅</span>
+                <span className="text-xs font-bold text-gray-300 font-mono">{gameState.day}</span>
+              </div>
+
+              <div className="px-2 py-1 bg-black/50 border border-neon-yellow/50 rounded flex items-center gap-1.5">
+                <span className="text-sm">⭐</span>
+                <span className="text-xs font-bold text-neon-yellow font-mono">
+                  {gameState.score.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Full mode for traditional layout
   return (
     <motion.div
       initial={{ y: -100 }}
