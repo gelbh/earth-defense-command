@@ -85,24 +85,28 @@ const MainMenu = ({
             transition={{ delay: 0.6 }}
             className="bg-black bg-opacity-50 rounded-lg border border-neon-blue p-4 mb-8 font-mono"
           >
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-neon-blue">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-neon-blue text-center">
                   {progression.unlockedLevels.length}
                 </div>
-                <div className="text-sm text-gray-400">Levels Unlocked</div>
+                <div className="text-sm text-gray-400 text-center">
+                  Levels Unlocked
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-yellow-400">
+              <div className="flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-yellow-400 text-center">
                   ⭐ {progression.totalStars}
                 </div>
-                <div className="text-sm text-gray-400">Total Stars</div>
+                <div className="text-sm text-gray-400 text-center">
+                  Total Stars
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-green-400">
+              <div className="flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-green-400 text-center">
                   💎 {progression.gems}
                 </div>
-                <div className="text-sm text-gray-400">Gems</div>
+                <div className="text-sm text-gray-400 text-center">Gems</div>
               </div>
             </div>
           </motion.div>
