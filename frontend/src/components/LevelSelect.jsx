@@ -79,35 +79,35 @@ const LevelCard = ({ level, stars, bestTime, locked, onClick }) => {
           {level.difficulty.toUpperCase()}
         </div>
 
-        {/* Stars */}
-        {!locked && (
-          <div className="flex justify-center gap-1 mb-2">
-            {[1, 2, 3].map((star) => (
+        {/* Stars - Always reserve space */}
+        <div className="flex justify-center gap-1 mb-2">
+          {!locked ? (
+            [1, 2, 3].map((star) => (
               <span
                 key={star}
                 className={`text-2xl ${
-                  star <= stars ? "text-yellow-400" : "text-gray-600"
+                  star <= (stars || 0) ? "" : "opacity-20"
                 }`}
               >
                 ⭐
               </span>
-            ))}
-          </div>
-        )}
+            ))
+          ) : (
+            // Reserve space for locked missions
+            <span className="text-2xl text-transparent">⭐⭐⭐</span>
+          )}
+        </div>
 
-        {/* Best Time */}
-        {!locked && bestTime && (
-          <div className="text-sm text-gray-400">
-            Best: {formatTime(bestTime)}
-          </div>
-        )}
-
-        {/* Locked Message */}
-        {locked && (
-          <div className="text-sm text-gray-500 mt-2">
-            Complete previous level to unlock
-          </div>
-        )}
+        {/* Best Time / Locked Message - Always same height */}
+        <div className="text-sm h-5">
+          {!locked ? (
+            <span className="text-gray-400">
+              {bestTime ? `Best: ${formatTime(bestTime)}` : "\u00A0"}
+            </span>
+          ) : (
+            <span className="text-gray-500">🔒 Complete prev. level</span>
+          )}
+        </div>
       </div>
     </motion.button>
   );
@@ -121,7 +121,19 @@ const LevelSelect = ({ onSelectLevel, onBack }) => {
     isLevelUnlocked,
     getLevelStars,
     getLevelBestTime,
+    resetProgression,
   } = useLevel();
+
+  const handleClearProgress = () => {
+    if (
+      window.confirm(
+        "Are you sure you want to clear all progress? This will reset all stars and unlocked levels."
+      )
+    ) {
+      resetProgression();
+      window.location.reload();
+    }
+  };
 
   if (loading) {
     return (
@@ -152,12 +164,21 @@ const LevelSelect = ({ onSelectLevel, onBack }) => {
               {progression.gems}
             </p>
           </div>
-          <button
-            onClick={onBack}
-            className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white font-mono rounded border-2 border-gray-600 transition-colors"
-          >
-            ← BACK TO MENU
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleClearProgress}
+              className="px-4 py-3 bg-red-900 hover:bg-red-800 text-white font-mono rounded border-2 border-red-600 transition-colors text-sm"
+              title="Reset all progress"
+            >
+              🔄 CLEAR PROGRESS
+            </button>
+            <button
+              onClick={onBack}
+              className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white font-mono rounded border-2 border-gray-600 transition-colors"
+            >
+              ← BACK TO MENU
+            </button>
+          </div>
         </motion.div>
 
         {/* Progress Bar */}
