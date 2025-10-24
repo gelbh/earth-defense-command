@@ -7,10 +7,12 @@ A real-time planetary defense game using NASA's Near Earth Object API. Play thro
 ## 🎮 Features
 
 ### Game Modes
+
 - **Campaign Mode** - 10 structured levels with specific objectives and star ratings
 - **Endless Mode** - Classic survival gameplay with continuous asteroid threats
 
 ### Core Systems
+
 - **3D Earth Visualization** - Full-screen immersive 3D globe with React Three Fiber
 - **Real NASA Data** - Live asteroid feeds from NASA's NEO API
 - **Orbital Defense Network** - Deploy and upgrade satellites and laser probes
@@ -68,6 +70,7 @@ Open [http://localhost:5173](http://localhost:5173) and play!
 ## 🎯 How to Play
 
 ### Campaign Mode
+
 1. **Choose a Level** - Select from unlocked missions
 2. **Review Objectives** - See mission goals and loadout
 3. **Launch Mission** - Start the level
@@ -77,6 +80,7 @@ Open [http://localhost:5173](http://localhost:5173) and play!
 7. **Unlock Levels** - Progress through the campaign
 
 ### Endless Mode
+
 1. **Deploy Satellites** ($150K) - Detect incoming asteroids
 2. **Launch Probes** ($200K) - Deflect threats with lasers
 3. **Upgrade Assets** - Click satellites/probes in 3D view to upgrade
@@ -85,6 +89,7 @@ Open [http://localhost:5173](http://localhost:5173) and play!
 6. **Survive** - How long can you defend Earth?
 
 **Controls:**
+
 - 🖱️ Drag to rotate camera
 - 📜 Scroll to zoom
 - 🎯 Click asteroids to deflect
@@ -125,12 +130,14 @@ earth-defense-command/
 ## 🔗 API Endpoints
 
 **Endless Mode:**
+
 - `GET /api/events` - Generate asteroid events
 - `GET /api/events/state` - Get game state
 - `POST /api/events/action` - Deploy, deflect, upgrade
 - `POST /api/events/advance-day` - Next day
 
 **Campaign Mode:**
+
 - `GET /api/levels` - Get all levels
 - `GET /api/levels/:id` - Get specific level
 - `POST /api/levels/:id/start` - Start level
@@ -140,6 +147,7 @@ earth-defense-command/
 - `POST /api/levels/progression/update` - Update progression
 
 **NASA Data:**
+
 - `GET /api/neo/asteroids` - Real asteroid data from NASA NEO API
 
 ## 🎨 UI/UX Design
