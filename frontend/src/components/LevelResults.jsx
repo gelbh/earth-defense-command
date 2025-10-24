@@ -35,62 +35,48 @@ const LevelResults = ({ results, onNextLevel, onRetry, onMenu }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-space-blue flex items-center justify-center p-8 overflow-y-auto">
+    <div className="fixed inset-0 bg-space-blue flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.8, y: 50 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="max-w-4xl w-full bg-black bg-opacity-90 rounded-lg border-2 border-neon-green p-8 font-mono"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-5xl w-full bg-black bg-opacity-90 rounded-lg border-2 border-neon-green p-4 md:p-6 font-mono"
       >
         {/* Victory Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6"
-        >
-          <h1 className="text-5xl font-bold text-neon-green mb-2">
+        <div className="text-center mb-3">
+          <h1 className="text-3xl font-bold text-neon-green mb-1">
             ✅ MISSION COMPLETE!
           </h1>
-          <p className="text-2xl text-gray-300">{results.levelName}</p>
-        </motion.div>
+          <p className="text-lg text-gray-300">{results.levelName}</p>
+        </div>
 
         {/* Star Rating */}
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.3, type: "spring" }}
-          className="flex justify-center gap-4 mb-8"
-        >
+        <div className="flex justify-center gap-3 mb-4">
           {[1, 2, 3].map((star) => (
             <motion.div
               key={star}
               initial={{ scale: 0, rotate: -180 }}
               animate={{
-                scale: star <= starsAnimated ? 1.2 : 0.8,
+                scale: star <= starsAnimated ? 1 : 0.7,
                 rotate: 0,
               }}
               transition={{ delay: star * 0.3, type: "spring" }}
-              className={`text-7xl transition-all duration-300 ${getStarColor(
+              className={`text-5xl transition-all duration-300 ${getStarColor(
                 star
               )}`}
             >
               ⭐
             </motion.div>
           ))}
-        </motion.div>
+        </div>
 
         {/* Performance Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
           {/* Objectives */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-blue-900 bg-opacity-30 rounded-lg p-4 border border-neon-blue"
-          >
-            <h2 className="text-xl font-bold text-neon-blue mb-3 flex items-center gap-2">
+          <div className="bg-blue-900 bg-opacity-30 rounded-lg p-3 border border-neon-blue">
+            <h2 className="text-sm font-bold text-neon-blue mb-2 flex items-center gap-2">
               <span>📋</span> OBJECTIVES
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-1 text-xs">
               {results.objectives.map((objective, index) => (
                 <div
                   key={index}
@@ -101,26 +87,21 @@ const LevelResults = ({ results, onNextLevel, onRetry, onMenu }) => {
                   <span>{objective.completed ? "✅" : "❌"}</span>
                   <span className="flex-1">{objective.description}</span>
                   {objective.target && (
-                    <span className="text-gray-400 text-sm">
+                    <span className="text-gray-400 text-xs">
                       {objective.current}/{objective.target}
                     </span>
                   )}
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
 
           {/* Statistics */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-purple-900 bg-opacity-30 rounded-lg p-4 border border-purple-400"
-          >
-            <h2 className="text-xl font-bold text-purple-400 mb-3 flex items-center gap-2">
+          <div className="bg-purple-900 bg-opacity-30 rounded-lg p-3 border border-purple-400">
+            <h2 className="text-sm font-bold text-purple-400 mb-2 flex items-center gap-2">
               <span>📊</span> PERFORMANCE
             </h2>
-            <div className="space-y-2 text-gray-300">
+            <div className="space-y-1 text-xs text-gray-300">
               <div className="flex justify-between">
                 <span>Time:</span>
                 <span className="text-cyan-400">
@@ -152,52 +133,42 @@ const LevelResults = ({ results, onNextLevel, onRetry, onMenu }) => {
                 </span>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Final Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className="grid grid-cols-3 gap-4 mb-6"
-        >
-          <div className="bg-green-900 bg-opacity-30 rounded-lg p-4 border border-green-400 text-center">
-            <div className="text-3xl font-bold text-green-400">
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="bg-green-900 bg-opacity-30 rounded-lg p-2 border border-green-400 text-center">
+            <div className="text-xl font-bold text-green-400">
               {results.statistics.finalEarthHealth}%
             </div>
-            <div className="text-sm text-gray-400">Earth Health</div>
+            <div className="text-xs text-gray-400">Earth Health</div>
           </div>
-          <div className="bg-blue-900 bg-opacity-30 rounded-lg p-4 border border-blue-400 text-center">
-            <div className="text-3xl font-bold text-blue-400">
+          <div className="bg-blue-900 bg-opacity-30 rounded-lg p-2 border border-blue-400 text-center">
+            <div className="text-xl font-bold text-blue-400">
               {results.rewards.score}
             </div>
-            <div className="text-sm text-gray-400">Score</div>
+            <div className="text-xs text-gray-400">Score</div>
           </div>
-          <div className="bg-yellow-900 bg-opacity-30 rounded-lg p-4 border border-yellow-400 text-center">
-            <div className="text-3xl font-bold text-yellow-400">
+          <div className="bg-yellow-900 bg-opacity-30 rounded-lg p-2 border border-yellow-400 text-center">
+            <div className="text-xl font-bold text-yellow-400">
               {results.rewards.gems}
             </div>
-            <div className="text-sm text-gray-400">Gems Earned</div>
+            <div className="text-xs text-gray-400">Gems Earned</div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Rewards */}
         {results.rewards.unlocks && results.rewards.unlocks.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.8 }}
-            className="bg-gradient-to-r from-yellow-900 to-orange-900 bg-opacity-30 rounded-lg p-4 border-2 border-yellow-400 mb-6"
-          >
-            <h2 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2">
-              <span>🎁</span> REWARDS UNLOCKED!
+          <div className="bg-gradient-to-r from-yellow-900 to-orange-900 bg-opacity-30 rounded-lg p-2 border border-yellow-400 mb-3">
+            <h2 className="text-xs font-bold text-yellow-400 mb-1 flex items-center gap-2">
+              <span>🎁</span> REWARDS
             </h2>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1">
               {results.rewards.unlocks.map((unlock, index) => (
                 <div
                   key={index}
-                  className="px-3 py-1 bg-yellow-600 bg-opacity-50 rounded border border-yellow-400 text-white text-sm"
+                  className="px-2 py-0.5 bg-yellow-600 bg-opacity-50 rounded border border-yellow-400 text-white text-xs"
                 >
                   {unlock.startsWith("level_")
                     ? `Level ${unlock.split("_")[1]}`
@@ -205,76 +176,51 @@ const LevelResults = ({ results, onNextLevel, onRetry, onMenu }) => {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Action Buttons */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
           <button
             onClick={onRetry}
-            className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded border-2 border-gray-600 transition-colors"
+            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded border-2 border-gray-600 transition-colors text-sm"
           >
             🔄 RETRY
           </button>
           <button
             onClick={onMenu}
-            className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded border-2 border-gray-600 transition-colors"
+            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded border-2 border-gray-600 transition-colors text-sm"
           >
             📋 LEVEL SELECT
           </button>
           {onNextLevel && (
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <button
               onClick={onNextLevel}
-              className="px-6 py-3 bg-gradient-to-r from-neon-blue to-neon-green hover:from-blue-500 hover:to-green-500 text-white font-bold rounded border-2 border-neon-green transition-all"
+              className="px-4 py-2 bg-gradient-to-r from-neon-blue to-neon-green hover:from-blue-500 hover:to-green-500 text-white font-bold rounded border-2 border-neon-green transition-all text-sm"
             >
               ➡️ NEXT LEVEL
-            </motion.button>
+            </button>
           )}
-        </motion.div>
+        </div>
 
         {/* Encouragement Message */}
-        <AnimatePresence>
+        <div className="text-center text-sm">
           {results.stars === 3 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ delay: 1.2 }}
-              className="mt-6 text-center text-yellow-400 font-bold text-lg"
-            >
-              🏆 PERFECT! Outstanding performance, Commander!
-            </motion.div>
+            <div className="text-yellow-400 font-bold">
+              🏆 PERFECT! Outstanding performance!
+            </div>
           )}
           {results.stars === 2 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ delay: 1.2 }}
-              className="mt-6 text-center text-green-400 text-lg"
-            >
+            <div className="text-green-400">
               ✨ Excellent work! Can you get 3 stars?
-            </motion.div>
+            </div>
           )}
           {results.stars === 1 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ delay: 1.2 }}
-              className="mt-6 text-center text-blue-400 text-lg"
-            >
-              💪 Mission complete! Try for more stars next time!
-            </motion.div>
+            <div className="text-blue-400">
+              💪 Mission complete! Try for more stars!
+            </div>
           )}
-        </AnimatePresence>
+        </div>
       </motion.div>
     </div>
   );
