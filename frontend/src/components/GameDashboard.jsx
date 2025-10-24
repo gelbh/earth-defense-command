@@ -4,7 +4,6 @@ import { useGame } from "../context/GameContext";
 import { useLevel } from "../context/LevelContext";
 import ResourceHUD from "./ResourceHUD";
 import MapPanel from "./MapPanel";
-import CommandPanel from "./CommandPanel";
 import EventFeed from "./EventFeed";
 import ActionButtons from "./ActionButtons";
 import UpgradeModal from "./UpgradeModal";
@@ -36,7 +35,6 @@ const GameDashboard = ({
 
   // Determine which state to use
   const gameState = isLevelMode ? levelState : endlessGameState;
-  const loading = isLevelMode ? levelLoading : endlessLoading;
   const error = isLevelMode ? levelError : endlessError;
 
   // Local state
@@ -47,7 +45,8 @@ const GameDashboard = ({
     return !hasSeenTutorial && !isLevelMode; // Don't show tutorial in level mode
   });
   const [events, setEvents] = useState([]);
-  const [showObjectives, setShowObjectives] = useState(isLevelMode);
+  const [showEventLog, setShowEventLog] = useState(true);
+  const [showObjectives, setShowObjectives] = useState(true);
 
   // Handle tutorial close and mark as seen
   const handleTutorialClose = () => {
@@ -77,7 +76,7 @@ const GameDashboard = ({
     if (isLevelMode && sessionId) {
       const interval = setInterval(() => {
         getLevelState();
-      }, 2000); // Poll every 2 seconds
+      }, 500); // Poll every 0.5 seconds for smooth timer updates
 
       return () => clearInterval(interval);
     }
@@ -116,7 +115,9 @@ const GameDashboard = ({
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-neon-blue mx-auto mb-4"></div>
           <p className="text-neon-blue font-mono">
-            {isLevelMode ? "Initializing Mission..." : "Initializing Earth Defense Command..."}
+            {isLevelMode
+              ? "Initializing Mission..."
+              : "Initializing Earth Defense Command..."}
           </p>
         </div>
       </div>
@@ -135,119 +136,221 @@ const GameDashboard = ({
   }
 
   return (
-    <div className="h-screen flex flex-col bg-space-blue overflow-hidden">
-      {/* Level Info Bar (Level Mode Only) */}
-      {isLevelMode && gameState && (
-        <div className="bg-gray-900 border-b border-neon-blue px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="text-neon-blue hover:text-blue-400 transition-colors"
-            >
-              ← Back
-            </button>
-            <h2 className="text-neon-blue font-bold text-lg">
-              {gameState.levelName || "Level"}
-            </h2>
-            <div className="text-white">
-              Wave {gameState.currentWave}/{gameState.totalWaves}
-              {gameState.waveTimer > 0 && (
-                <span className="text-neon-green ml-2">
-                  Next: {gameState.waveTimer}s
-                </span>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={() => setShowObjectives(!showObjectives)}
-            className="px-3 py-1 bg-neon-blue text-white rounded hover:bg-blue-500 transition-colors"
-          >
-            {showObjectives ? "Hide" : "Show"} Objectives
-          </button>
-        </div>
-      )}
-
-      {/* Resource HUD */}
-      <div className="flex-shrink-0">
-        <ResourceHUD
+    <div className="h-screen w-screen relative overflow-hidden bg-black">
+      {/* FULL SCREEN MAP - Background */}
+      <div className="absolute inset-0">
+        <MapPanel
           gameState={gameState}
-          onHelpClick={() => setShowTutorial(true)}
+          events={events}
+          threats={gameState?.threats || []}
+          isLevelMode={isLevelMode}
         />
       </div>
 
-      {/* Main Game Area */}
-      <div className="flex-1 grid grid-cols-12 gap-3 p-3 overflow-hidden">
-        {/* Map Panel - Left Side */}
-        <div
-          className={`${
-            showObjectives && isLevelMode ? "col-span-5" : "col-span-7"
-          } h-full overflow-hidden transition-all`}
-        >
-          <MapPanel
+      {/* OVERLAY UI LAYER */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Top Bar - Compact Resources + Wave Counter */}
+        <div className="pointer-events-auto">
+          <ResourceHUD
             gameState={gameState}
-            events={events}
-            threats={gameState?.threats || []}
-            isLevelMode={isLevelMode}
+            onHelpClick={() => setShowTutorial(true)}
+            compact={true}
           />
-        </div>
 
-        {/* Objectives Panel (Level Mode Only) */}
-        {isLevelMode && showObjectives && gameState?.levelObjectives && (
-          <div className="col-span-2 h-full overflow-hidden">
-            <div className="bg-gray-900 border border-neon-blue rounded-lg p-4 h-full overflow-y-auto">
-              <h3 className="text-neon-blue font-bold text-lg mb-4">
-                Mission Objectives
-              </h3>
-              <div className="space-y-3">
-                {gameState.levelObjectives.map((objective) => (
-                  <div
-                    key={objective.id}
-                    className={`p-3 rounded border ${
-                      objective.completed
-                        ? "bg-green-900 border-green-500 text-green-300"
-                        : objective.failed
-                        ? "bg-red-900 border-red-500 text-red-300"
-                        : "bg-gray-800 border-gray-600 text-white"
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <span className="text-xl">
-                        {objective.completed
-                          ? "✓"
-                          : objective.failed
-                          ? "✗"
-                          : "○"}
-                      </span>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold">
-                          {objective.description}
-                        </p>
-                        {objective.target && (
-                          <p className="text-xs mt-1 opacity-75">
-                            Progress: {objective.current || 0}/
-                            {objective.target}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {/* Wave Countdown in Header (Level Mode Only) */}
+          {isLevelMode && gameState && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2">
+              <div className="bg-black/60 backdrop-blur-lg rounded-lg px-4 py-2">
+                <div className="flex items-center justify-center gap-3 text-xs text-white">
+                  <span className="px-2 py-1 bg-neon-blue/20 rounded font-bold">
+                    Wave {gameState.currentWave}/{gameState.totalWaves}
+                  </span>
+                  {gameState.waveTimer > 0 && (
+                    <span className="text-neon-green font-bold">
+                      Next: {gameState.waveTimer}s
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+        </div>
+
+        {/* Top Left - Level Info (Level Mode Only) */}
+        {isLevelMode && gameState && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="absolute top-20 left-4 pointer-events-auto"
+          >
+            <div className="bg-black/60 backdrop-blur-lg border border-neon-blue/50 rounded-lg p-4 shadow-2xl">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={onBack}
+                  className="text-neon-blue hover:text-blue-400 transition-colors text-sm"
+                >
+                  ← Back
+                </button>
+                <div className="w-px h-4 bg-neon-blue/30"></div>
+                <h2 className="text-neon-blue font-bold text-sm">
+                  {gameState.levelName || "Level"}
+                </h2>
+              </div>
+            </div>
+          </motion.div>
         )}
 
-        {/* Command Panel - Right Side */}
-        <div className="col-span-5 h-full overflow-hidden">
-          <CommandPanel>
-            <EventFeed events={events} />
+        {/* Left Side - Objectives Panel (Level Mode Only) */}
+        {isLevelMode && gameState?.levelObjectives && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="absolute top-48 left-4 w-80 max-h-96 pointer-events-auto"
+          >
+            <div className="bg-black/60 backdrop-blur-lg border border-neon-blue/50 rounded-lg shadow-2xl overflow-hidden">
+              <div className="bg-gradient-to-r from-neon-blue/30 to-transparent px-4 py-3 border-b border-neon-blue/30 flex items-center justify-between">
+                <h3 className="text-neon-blue font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                  <span>🎯</span> Mission Objectives
+                </h3>
+                <button
+                  onClick={() => setShowObjectives(!showObjectives)}
+                  className="text-neon-blue hover:text-blue-400 transition-colors text-lg"
+                  title={showObjectives ? "Minimize" : "Expand"}
+                >
+                  {showObjectives ? "−" : "+"}
+                </button>
+              </div>
+              {showObjectives && (
+                <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
+                  {gameState.levelObjectives.map((objective) => (
+                    <motion.div
+                      key={objective.id}
+                      whileHover={{ scale: 1.02 }}
+                      className={`p-3 rounded-lg border backdrop-blur-sm ${
+                        objective.completed
+                          ? "bg-green-500/20 border-green-500/50 text-green-300"
+                          : objective.failed
+                          ? "bg-red-500/20 border-red-500/50 text-red-300"
+                          : "bg-gray-800/40 border-gray-600/50 text-white"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-lg">
+                          {objective.completed
+                            ? "✓"
+                            : objective.failed
+                            ? "✗"
+                            : "○"}
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold">
+                            {objective.description}
+                          </p>
+                          {objective.target && (
+                            <p className="text-xs mt-1 opacity-75 font-mono">
+                              {objective.current || 0}/{objective.target}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Right Side - Event Log */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="absolute top-20 right-4 w-96 pointer-events-auto"
+        >
+          <div className="bg-black/60 backdrop-blur-lg border border-neon-blue/50 rounded-lg shadow-2xl overflow-hidden">
+            {/* Event Feed */}
+            <div className="bg-gradient-to-r from-neon-blue/30 to-transparent px-4 py-3 border-b border-neon-blue/30 flex items-center justify-between">
+              <h3 className="text-neon-blue font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                <span>📡</span> Event Log
+              </h3>
+              <button
+                onClick={() => setShowEventLog(!showEventLog)}
+                className="text-neon-blue hover:text-blue-400 transition-colors text-lg"
+                title={showEventLog ? "Minimize" : "Expand"}
+              >
+                {showEventLog ? "−" : "+"}
+              </button>
+            </div>
+            {showEventLog && (
+              <div className="max-h-96 overflow-hidden">
+                <EventFeed events={events} />
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Bottom Right - Action Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-24 right-4 pointer-events-auto"
+        >
+          <div className="bg-black/60 backdrop-blur-lg border border-neon-blue/50 rounded-lg shadow-2xl p-4 max-h-96 overflow-visible">
             <ActionButtons
               gameState={gameState}
               onUpgradeClick={() => setShowUpgradeModal(true)}
               isLevelMode={isLevelMode}
             />
-          </CommandPanel>
-        </div>
+          </div>
+        </motion.div>
+
+        {/* Bottom Left - Earth Health Indicator */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-24 left-4 pointer-events-auto"
+        >
+          <div className="bg-black/60 backdrop-blur-lg border border-neon-blue/50 rounded-lg shadow-2xl p-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🌍</span>
+              <div>
+                <p className="text-xs text-gray-400 font-mono uppercase">
+                  Earth Health
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${gameState.earthHealth}%` }}
+                      className={`h-full rounded-full ${
+                        gameState.earthHealth > 75
+                          ? "bg-gradient-to-r from-green-500 to-green-400"
+                          : gameState.earthHealth > 50
+                          ? "bg-gradient-to-r from-yellow-500 to-yellow-400"
+                          : gameState.earthHealth > 25
+                          ? "bg-gradient-to-r from-orange-500 to-orange-400"
+                          : "bg-gradient-to-r from-red-500 to-red-400"
+                      }`}
+                    />
+                  </div>
+                  <span
+                    className={`text-sm font-bold font-mono ${
+                      gameState.earthHealth > 75
+                        ? "text-green-400"
+                        : gameState.earthHealth > 50
+                        ? "text-yellow-400"
+                        : gameState.earthHealth > 25
+                        ? "text-orange-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {gameState.earthHealth}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </div>
 
       {/* Tutorial Modal */}
