@@ -1504,7 +1504,6 @@ const Earth3D = ({
     let selectedProbe = nearestProbe;
     if (!selectedProbe && gameState.probes.length > 0) {
       selectedProbe = gameState.probes[0];
-      console.log("No line of sight - using first available probe");
     }
 
     if (!selectedProbe) {
